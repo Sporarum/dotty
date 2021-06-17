@@ -530,8 +530,8 @@ object TypeErasure {
     assert(applyInfo.isInstanceOf[PolyType])
     val res = applyInfo.resultType
     val paramss = res.paramNamess
+    assert(paramss.length <= 1)
     val arity = if paramss.isEmpty then 0 else paramss.head.length
-    assert(arity <= 1)
     erasure(defn.FunctionType(arity, isContextual = res.isImplicitMethod, isErased = res.isErasedMethod))
 }
 
