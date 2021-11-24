@@ -208,7 +208,7 @@ object EtaExpansion extends LiftImpure {
    *
    *  In each case, the result is an untyped tree, with `es` and `expr` as typed splices.
    *
-   *    F[V](x) ==> (x => F[X])
+   *    F[V](x) ==> (x => F[X])       // Should be (x => F[X](x)), no ? Or maybe more like (x => F[T](x)) for clarity
    *
    *  Note: We allow eta expanding a method with a call by name parameter like
    *
@@ -224,6 +224,7 @@ object EtaExpansion extends LiftImpure {
    *  But see comment on the `ExprType` case in function `prune` in class `ConstraintHandling`.
    */
   def etaExpand(tree: Tree, mt: MethodType, xarity: Int)(using Context): untpd.Tree = {
+    println("EtaExpansion.etaExpand called")
     import untpd._
     assert(!ctx.isAfterTyper || (ctx.phase eq ctx.base.inliningPhase), ctx.phase)
     val defs = new mutable.ListBuffer[tpd.Tree]

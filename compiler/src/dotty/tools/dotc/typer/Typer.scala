@@ -3725,7 +3725,7 @@ class Typer extends Namer
           val arity =
             if (funExpected)
               if (!isFullyDefined(pt, ForceDegree.none) && isFullyDefined(wtp, ForceDegree.none))
-                // if method type is fully defined, but expected type is not,
+                // if expected type is not fully defined, but method type is,
                 // prioritize method parameter types as parameter types of the eta-expanded closure
                 0
               else defn.functionArity(ptNorm)
@@ -3906,7 +3906,7 @@ class Typer extends Namer
           nme.CONSTRUCTOR),
         pt)
         .showing(i"convert creator $tree -> $result", typr)
-
+    
     tree match {
       case _: MemberDef | _: PackageDef | _: Import | _: WithoutTypeOrPos[?] | _: Closure => tree
       case _ => tree.tpe.widen match {
@@ -3922,15 +3922,115 @@ class Typer extends Namer
               adaptOverloaded(ref)
           }
         case poly: PolyType if !(ctx.mode is Mode.Type) =>
-          if tree.symbol.isAllOf(ApplyProxyFlags) then newExpr
-          else if pt.isInstanceOf[PolyProto] then tree
-          else
-            var typeArgs = tree match
-              case Select(qual, nme.CONSTRUCTOR) => qual.tpe.widenDealias.argTypesLo.map(TypeTree)
+          
+          println("Tree:")
+          println(tree.show)
+          println(tree)
+          println("Tree type:")
+          println(tree.tpe.show)
+          println(tree.tpe)
+          println("Widened tree type:")
+          println(tree.tpe.widen.show)
+          println(tree.tpe.widen)
+          println("Destination type:")
+          println(pt.show)
+          println(pt)
+          
+
+          val res = if tree.symbol.isAllOf(ApplyProxyFlags) then 
+            println("a")
+            newExpr
+          else if pt.isInstanceOf[PolyProto] then //
+            println("b")
+            tree
+          else 
+            // creer des nouveaux type args ?
+            // appeler .appliedTo(targs) sur le tree
+            // ou surement plutot TypeApply
+            // va il y avoir des typedSplice dedans probablement
+            // return un truc utpd, appeler typed sur le tout
+            // zip compare les targs avec <:<
+
+            var tpTargs = tree match
+                case Select(qual, nme.CONSTRUCTOR) => qual.tpe.widenDealias.argTypesLo.map(TypeTree)
+                case _ => Nil
+            if tpTargs.isEmpty then tpTargs = constrained(poly, tree)._2
+
+            println("c")
+            val ptTargs: List[TypeBounds] = pt match{
+              case RefinedType(_, _, npt@PolyType((ptTargs, _))) => 
+                /*
+                println("Unrefined Destination type:")
+                println(npt.show)
+                println(npt)
+                println("Type params:")
+                println(ptTargs)
+                */
+                ptTargs.map(_.paramInfo)
               case _ => Nil
-            if typeArgs.isEmpty then typeArgs = constrained(poly, tree)._2
-            convertNewGenericArray(readapt(tree.appliedToTypeTrees(typeArgs)))
-        case wtp =>
+            }
+
+            //val tpTargs: List[TypeTree] = ??? //Is it TypeTree ???
+            //val ptTargs: List[TypeTree] = ???
+            /*
+            println("Type params:")
+            println("tp:")
+            println(tpTargs)
+            println("pt:")
+            println(ptTargs)
+            */
+
+            if(ptTargs.size == tpTargs.size){// COMMIT RIGHT NOW !
+              println(ptTargs.zip(tpTargs).map{case (ptArg, tpArg) => ptArg.contains(tpArg.tpe)})
+            }// COMMIT RIGHT NOW !
+            
+
+            if(ptTargs.size == tpTargs.size && ptTargs.zip(tpTargs).forall{case (ptArg, tpArg) => ptArg.contains(tpArg.tpe)}){
+              //println("Entered if")
+              //val targs = ptTargs.map(t => tpd.TypeTree(t))
+              val targs = tpTargs
+              val body = tree.appliedToTypeTrees(targs)// COMMIT RIGHT NOW !
+              val res = untpd.PolyFunction(targs, body)// COMMIT RIGHT NOW !
+              // /*
+              println("Res:")
+              println(res.show)
+              println(res)
+              //println(res.tpe.show)
+              //println(res.tpe)
+              //println(res.tpe.widen)
+              // */// COMMIT RIGHT NOW !
+              //res
+              typed(res)// COMMIT RIGHT NOW !
+            } // COMMIT RIGHT NOW !
+            /*
+            
+
+            if npt <:< poly then
+              // cree un object avec une methode polymorphique:
+              val res = AnonClass(List(defn.PolyFunctionType), List(tree.symbol.asTerm), List(nme.apply))
+              //println(defn.PolyFunctionType)
+              //println(res.show)// COMMIT RIGHT NOW !
+              //println(res)
+              //println(res.tpe.show)
+              //println(res.tpe)
+              //println(res.tpe.widen)
+              res
+              */
+            else// COMMIT RIGHT NOW !
+              var typeArgs = tree match
+                case Select(qual, nme.CONSTRUCTOR) => qual.tpe.widenDealias.argTypesLo.map(TypeTree)
+                case _ => Nil
+              if typeArgs.isEmpty then typeArgs = constrained(poly, tree)._2
+              convertNewGenericArray(readapt(tree.appliedToTypeTrees(typeArgs)))
+          /*
+          println(res.show)
+          println(res)
+          println()
+          println()
+          */
+          res
+        case wtp => // is it safe to move above into this ? //ie, is it okay to do the ctx.mode check at HERE ?
+          //println("entered case wtp")
           val isStructuralCall = wtp.isValueType && isStructuralTermSelectOrApply(tree)
           if (isStructuralCall)
             readaptSimplified(handleStructural(tree))
@@ -3941,8 +4041,20 @@ class Typer extends Namer
             case pt: PolyProto if !wtp.isImplicitMethod =>
               tryInsertApplyOrImplicit(tree, pt, locked)(tree) // error will be reported in typedTypeApply
             case _ =>
+              //println("entered case _")
               if (ctx.mode is Mode.Type) adaptType(tree.tpe)
-              else adaptNoArgs(wtp)
+              else {
+                /*
+                println(tree.show)
+                println(tree)
+                println(pt.show)
+                println(pt)
+                println()
+                println()
+                */
+
+                adaptNoArgs(wtp)
+              }
           }
       }
     }
