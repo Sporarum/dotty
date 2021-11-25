@@ -3938,6 +3938,7 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
         pt)
         .showing(i"convert creator $tree -> $result", typr)
     
+    // private def adapt1(tree: Tree, pt: Type, locked: TypeVars, tryGadtHealing: Boolean)(using Context): Tree
     tree match {
       case _: MemberDef | _: PackageDef | _: Import | _: WithoutTypeOrPos[?] | _: Closure => tree
       case _ => tree.tpe.widen match {
@@ -3971,7 +3972,7 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
           val res = if tree.symbol.isAllOf(ApplyProxyFlags) then 
             println("a")
             newExpr
-          else if pt.isInstanceOf[PolyProto] then //
+          else if pt.isInstanceOf[PolyProto] then
             println("b")
             tree
           else 
@@ -3982,14 +3983,19 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
             // return un truc utpd, appeler typed sur le tout
             // zip compare les targs avec <:<
 
+            // voir methode l1 correspond l2 ((x,y) => cond) de la libraire standard
+            // Changer pour juste poly.paramInfos
+            /*
             var tpTargs = tree match
                 case Select(qual, nme.CONSTRUCTOR) => qual.tpe.widenDealias.argTypesLo.map(TypeTree)
                 case _ => Nil
             if tpTargs.isEmpty then tpTargs = constrained(poly, tree)._2
+            */
+            val tpTargs = poly.paramInfos
 
             println("c")
-            val ptTargs: List[TypeBounds] = pt match{
-              case RefinedType(_, _, npt@PolyType((ptTargs, _))) => 
+            val (ptTargs: List[TypeBounds], ptRet: Type) = pt match{
+              case RefinedType(_, _, npt: PolyType) => 
                 /*
                 println("Unrefined Destination type:")
                 println(npt.show)
@@ -3997,8 +4003,8 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
                 println("Type params:")
                 println(ptTargs)
                 */
-                ptTargs.map(_.paramInfo)
-              case _ => Nil
+                (npt.paramInfos, npt.resType)
+              case _ => (Nil, NoType)
             }
 
             //val tpTargs: List[TypeTree] = ??? //Is it TypeTree ???
@@ -4011,17 +4017,29 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
             println(ptTargs)
             */
 
-            if(ptTargs.size == tpTargs.size){// COMMIT RIGHT NOW !
+            /*
+            if(ptTargs.size == tpTargs.size){
               println(ptTargs.zip(tpTargs).map{case (ptArg, tpArg) => ptArg.contains(tpArg.tpe)})
-            }// COMMIT RIGHT NOW !
+            }
+            */
             
 
-            if(ptTargs.size == tpTargs.size && ptTargs.zip(tpTargs).forall{case (ptArg, tpArg) => ptArg.contains(tpArg.tpe)}){
+            if (ptTargs corresponds tpTargs)(_ <:< _) then
               //println("Entered if")
               //val targs = ptTargs.map(t => tpd.TypeTree(t))
-              val targs = tpTargs
-              val body = tree.appliedToTypeTrees(targs)// COMMIT RIGHT NOW !
-              val res = untpd.PolyFunction(targs, body)// COMMIT RIGHT NOW !
+              val paramNames = poly.paramNames //Should be pt or tp names ?
+              //val paramNames = tpTargs.map(_ => UniqueName.fresh().toTypeName)
+              //val targs = tpTargs.map(TypeTree(_))
+
+              //Is there a difference if I put everything in tpd ?
+              val tParams = (paramNames zip tpTargs).map{case (name, bounds) => untpd.TypeDef(name, untpd.TypeTree(bounds))} //TypeDef pour les définitions, et des 
+              val targs = paramNames.map(name => untpd.Ident(name))   //TypeTree(Ident(...)) pour l'utilisation
+              val body = untpd.AppliedTypeTree(untpd.TypedSplice(tree), targs)
+              // reminder: tree.appliedToTypes exists
+
+              //val body = typed(tree.appliedToTypeTrees(targs), ptRet)
+              //val body = adapt(tree.appliedToTypeTrees(targs), ptRet) //Doesnt work: Infinite loop
+              val res = untpd.PolyFunction(targs, body)
               // /*
               println("Res:")
               println(res.show)
@@ -4029,10 +4047,10 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
               //println(res.tpe.show)
               //println(res.tpe)
               //println(res.tpe.widen)
-              // */// COMMIT RIGHT NOW !
+              // */
               //res
-              typed(res)// COMMIT RIGHT NOW !
-            } // COMMIT RIGHT NOW !
+              typed(res, pt)
+            
             /*
             
 
@@ -4040,24 +4058,23 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
               // cree un object avec une methode polymorphique:
               val res = AnonClass(List(defn.PolyFunctionType), List(tree.symbol.asTerm), List(nme.apply))
               //println(defn.PolyFunctionType)
-              //println(res.show)// COMMIT RIGHT NOW !
+              //println(res.show)
               //println(res)
               //println(res.tpe.show)
               //println(res.tpe)
               //println(res.tpe.widen)
               res
               */
-            else// COMMIT RIGHT NOW !
+            else
               var typeArgs = tree match
                 case Select(qual, nme.CONSTRUCTOR) => qual.tpe.widenDealias.argTypesLo.map(TypeTree)
                 case _ => Nil
               if typeArgs.isEmpty then typeArgs = constrained(poly, tree)._2
               convertNewGenericArray(readapt(tree.appliedToTypeTrees(typeArgs)))
           /*
+          println("Final res:")
           println(res.show)
           println(res)
-          println()
-          println()
           */
           res
         case wtp => // is it safe to move above into this ? //ie, is it okay to do the ctx.mode check at HERE ?
