@@ -30,6 +30,7 @@ class Mapper[T]{
 class EtaExpansionTests{
         
     def id[T](x: T) = x // method type [T](T): T
+
     //def protoPair[T](x: T): [U] => (U) => (T, U) = [U] => (y: U) => (x,y)
     //def pair[T](x: T)[U](y: U) = (x, y) //method type [T](T)[U](U): (T, U)
 
@@ -47,8 +48,12 @@ class EtaExpansionTests{
     //def weird3[T](x: Nothing): T = ??? // method type [T](Nothing): T
     //val valWeird3: [T] => T => T = weird3
 
-    //def monoPair[T](x: T)(y: T): (T, T) = (x, y)
-    //val valMonoPair: [T] => T => T => (T,T) = monoPair // error !!!!!!!!!!!!!!!!
+    //def simplePair(x: Int)(y: Int): (Int, Int) = (x, y)
+    //val valSimplePair: Int => Int => (Int, Int) = simplePair
+    /*
+    def monoPair[T](x: T)(y: T): (T, T) = (x, y)
+    val valMonoPair: [T] => T => T => (T,T) = monoPair // error !!!!!!!!!!!!!!!!
+    */
 
     //val valProtoPair1: [T] => (T) => [U] => U => (T, U) = protoPair
 
