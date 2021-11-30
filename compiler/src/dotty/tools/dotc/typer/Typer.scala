@@ -4025,21 +4025,24 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
             
 
             if (ptTargs corresponds tpTargs)(_ <:< _) then
-              //println("Entered if")
+              println("Entered if")
               //val targs = ptTargs.map(t => tpd.TypeTree(t))
-              val paramNames = poly.paramNames //Should be pt or tp names ?
+              val paramNames = poly.paramNames.map(n => UniqueName.fresh(n)) //Should be pt or tp names ?
               //val paramNames = tpTargs.map(_ => UniqueName.fresh().toTypeName)
               //val targs = tpTargs.map(TypeTree(_))
 
               //Is there a difference if I put everything in tpd ?
               val tParams = (paramNames zip tpTargs).map{case (name, bounds) => untpd.TypeDef(name, untpd.TypeTree(bounds))} //TypeDef pour les définitions, et des 
               val targs = paramNames.map(name => untpd.Ident(name))   //TypeTree(Ident(...)) pour l'utilisation
-              val body = untpd.AppliedTypeTree(untpd.TypedSplice(tree), targs)
-              // reminder: tree.appliedToTypes exists
+              //val body = untpd.AppliedTypeTree(untpd.TypedSplice(tree), tParams)
+              //val body = untpd.AppliedTypeTree(untpd.TypedSplice(tree), targs)
+              val body = untpd.TypeApply(untpd.TypedSplice(tree), targs)
+              //AppliedTypeTree for hk-types, TypeApply for poly methods ?
 
               //val body = typed(tree.appliedToTypeTrees(targs), ptRet)
               //val body = adapt(tree.appliedToTypeTrees(targs), ptRet) //Doesnt work: Infinite loop
-              val res = untpd.PolyFunction(targs, body)
+              val res = untpd.PolyFunction(tParams, body)
+              //val res = untpd.PolyFunction(targs, body)
               // /*
               println("Res:")
               println(res.show)
