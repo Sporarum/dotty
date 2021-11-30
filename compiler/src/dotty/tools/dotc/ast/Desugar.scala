@@ -1637,13 +1637,17 @@ object desugar {
           // Desugar [T_1, ..., T_M] => (P_1, ..., P_N) => R
           // Into    scala.PolyFunction { def apply[T_1, ..., T_M](x$1: P_1, ..., x$N: P_N): R }
           val (res, applyVParamss) = body match
-            case Function(vargs, res) =>
+            // This brings all polymorphic functions to a common form, thus
+            // [T] => (T => T) =:= [T] => (T) => T
+            // However, it breaks binary compatibility
+            /*case Function(vargs, res) =>
               ( res,
                 vargs.zipWithIndex.map {
                   case (p: ValDef, _) => p.withAddedFlags(mods.flags)
                   case (p, n) => makeSyntheticParameter(n + 1, p).withAddedFlags(mods.flags)
-                } :: Nil
-              )
+                } :: 
+                  Nil
+              )*/
             case _ =>
               (body, Nil)
           RefinedTypeTree(polyFunctionTpt, List(
