@@ -1659,12 +1659,14 @@ object desugar {
           // Desugar [T_1, ..., T_M] => (x_1: P_1, ..., x_N: P_N) => body
           // Into    new scala.PolyFunction { def apply[T_1, ..., T_M](x_1: P_1, ..., x_N: P_N) = body }
           val (res, applyVParamss) = body match
+            /*
             case Function(vargs, res) =>
               ( res,
                 vargs.asInstanceOf[List[ValDef]]
                   .map(varg => varg.withAddedFlags(mods.flags | Param))
                 :: Nil
               )
+              */
             case _ =>
               (body, Nil)
           New(Template(emptyConstructor, List(polyFunctionTpt), Nil, EmptyValDef,
