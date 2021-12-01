@@ -224,7 +224,7 @@ object EtaExpansion extends LiftImpure {
    *  But see comment on the `ExprType` case in function `prune` in class `ConstraintHandling`.
    */
   def etaExpand(tree: Tree, mt: MethodType, xarity: Int)(using Context): untpd.Tree = {
-    println("EtaExpansion.etaExpand called")
+    //println("EtaExpansion.etaExpand called")
     import untpd._
     assert(!ctx.isAfterTyper || (ctx.phase eq ctx.base.inliningPhase), ctx.phase)
     val defs = new mutable.ListBuffer[tpd.Tree]

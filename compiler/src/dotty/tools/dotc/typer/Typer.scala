@@ -3955,6 +3955,7 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
           }
         case poly: PolyType if !(ctx.mode is Mode.Type) =>
           
+          /*
           println("Tree:")
           println(tree.show)
           println(tree)
@@ -3967,13 +3968,13 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
           println("Destination type:")
           println(pt.show)
           println(pt)
-          
+          */
 
           val res = if tree.symbol.isAllOf(ApplyProxyFlags) then 
-            println("a")
+            //println("a")
             newExpr
           else if pt.isInstanceOf[PolyProto] then
-            println("b")
+            //println("b")
             tree
           else 
             // creer des nouveaux type args ?
@@ -3993,7 +3994,7 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
             */
             val tpTargs = poly.paramInfos
 
-            println("c")
+            //println("c")
             val (ptTargs: List[TypeBounds], ptRet: Type) = pt match{
               case RefinedType(_, _, npt: PolyType) => 
                 /*
@@ -4025,7 +4026,7 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
             
 
             if (ptTargs corresponds tpTargs)(_ <:< _) then
-              println("Entered if")
+              //println("Entered if")
               //val targs = ptTargs.map(t => tpd.TypeTree(t))
               val paramNames = poly.paramNames.map(n => UniqueName.fresh(n)) //Should be pt or tp names ?
               //val paramNames = tpTargs.map(_ => UniqueName.fresh().toTypeName)
@@ -4043,14 +4044,14 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
               //val body = adapt(tree.appliedToTypeTrees(targs), ptRet) //Doesnt work: Infinite loop
               val res = untpd.PolyFunction(tParams, body)
               //val res = untpd.PolyFunction(targs, body)
-              // /*
+              /*
               println("Res:")
               println(res.show)
               println(res)
               //println(res.tpe.show)
               //println(res.tpe)
               //println(res.tpe.widen)
-              // */
+              */
               //res
               typed(res, pt)
             
