@@ -9,7 +9,7 @@ class EtaExpansionTests{
     val valWeird1: [T] => T => T = weird1 // error
     
     def weird4[T](x: Nothing): T = ???
-    val valWeird4: [T] => T => T = weird4 //error
+    val valWeird4: [T] => T => T = weird4 // error
 }
 
 
