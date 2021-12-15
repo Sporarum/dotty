@@ -3977,39 +3977,14 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
             //println("b")
             tree
           else 
-            // creer des nouveaux type args ?
-            // appeler .appliedTo(targs) sur le tree
-            // ou surement plutot TypeApply
-            // va il y avoir des typedSplice dedans probablement
-            // return un truc utpd, appeler typed sur le tout
-            // zip compare les targs avec <:<
-
-            // voir methode l1 correspond l2 ((x,y) => cond) de la libraire standard
-            // Changer pour juste poly.paramInfos
-            /*
-            var tpTargs = tree match
-                case Select(qual, nme.CONSTRUCTOR) => qual.tpe.widenDealias.argTypesLo.map(TypeTree)
-                case _ => Nil
-            if tpTargs.isEmpty then tpTargs = constrained(poly, tree)._2
-            */
             val tpTargs = poly.paramInfos
 
             //println("c")
             val (ptTargs: List[TypeBounds], ptRet: Type) = pt match{
               case RefinedType(_, _, npt: PolyType) => 
-                /*
-                println("Unrefined Destination type:")
-                println(npt.show)
-                println(npt)
-                println("Type params:")
-                println(ptTargs)
-                */
                 (npt.paramInfos, npt.resType)
               case _ => (Nil, NoType)
             }
-
-            //val tpTargs: List[TypeTree] = ??? //Is it TypeTree ???
-            //val ptTargs: List[TypeTree] = ???
             /*
             println("Type params:")
             println("tp:")
@@ -4017,14 +3992,7 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
             println("pt:")
             println(ptTargs)
             */
-
-            /*
-            if(ptTargs.size == tpTargs.size){
-              println(ptTargs.zip(tpTargs).map{case (ptArg, tpArg) => ptArg.contains(tpArg.tpe)})
-            }
-            */
             
-
             if (ptTargs corresponds tpTargs)(_ <:< _) then
               //println("Entered if")
               //val targs = ptTargs.map(t => tpd.TypeTree(t))
@@ -4038,12 +4006,8 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
               //val body = untpd.AppliedTypeTree(untpd.TypedSplice(tree), tParams)
               //val body = untpd.AppliedTypeTree(untpd.TypedSplice(tree), targs)
               val body = untpd.TypeApply(untpd.TypedSplice(tree), targs)
-              //AppliedTypeTree for hk-types, TypeApply for poly methods ?
 
-              //val body = typed(tree.appliedToTypeTrees(targs), ptRet)
-              //val body = adapt(tree.appliedToTypeTrees(targs), ptRet) //Doesnt work: Infinite loop
               val res = untpd.PolyFunction(tParams, body)
-              //val res = untpd.PolyFunction(targs, body)
               /*
               println("Res:")
               println(res.show)
