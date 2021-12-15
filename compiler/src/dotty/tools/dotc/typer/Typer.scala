@@ -3969,11 +3969,8 @@ class Typer extends Namer
               //val paramNames = tpTargs.map(_ => UniqueName.fresh().toTypeName)
               //val targs = tpTargs.map(TypeTree(_))
 
-              //Is there a difference if I put everything in tpd ?
-              val tParams = (paramNames zip tpTargs).map{case (name, bounds) => untpd.TypeDef(name, untpd.TypeTree(bounds))} //TypeDef pour les définitions, et des 
-              val targs = paramNames.map(name => untpd.Ident(name))   //TypeTree(Ident(...)) pour l'utilisation
-              //val body = untpd.AppliedTypeTree(untpd.TypedSplice(tree), tParams)
-              //val body = untpd.AppliedTypeTree(untpd.TypedSplice(tree), targs)
+              val tParams = (paramNames zip tpTargs).map{case (name, bounds) => untpd.TypeDef(name, untpd.TypeTree(bounds)).withMods(Params)}
+              val targs = paramNames.map(name => untpd.Ident(name))
               val body = untpd.TypeApply(untpd.TypedSplice(tree), targs)
 
               val res = untpd.PolyFunction(tParams, body)
