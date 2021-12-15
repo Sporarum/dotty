@@ -3969,7 +3969,7 @@ class Typer extends Namer
               //val paramNames = tpTargs.map(_ => UniqueName.fresh().toTypeName)
               //val targs = tpTargs.map(TypeTree(_))
 
-              val tParams = (paramNames zip tpTargs).map{case (name, bounds) => untpd.TypeDef(name, untpd.TypeTree(bounds)).withMods(Params)}
+              val tParams = (paramNames zip tpTargs).map{case (name, bounds) => untpd.TypeDef(name, untpd.TypeTree(bounds)).withAddedFlags(Param)}
               val targs = paramNames.map(name => untpd.Ident(name))
               val body = untpd.TypeApply(untpd.TypedSplice(tree), targs)
 
