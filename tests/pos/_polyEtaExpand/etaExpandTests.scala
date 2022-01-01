@@ -11,15 +11,18 @@ class EtaExpansionTests{
     val valId3: [U] => U => U = id
     val valId4: [U <: Int] => U => U = id
 
+    val mapped: (Int, String, Char) = (1, "two", '3').map(id)
+
+    
     def weird2[T](x: T): Nothing = ???
     val valWeird2: [T] => T => T = weird2
-    
+
     def weird3[T](x: Any): T = ???
     val valWeird3: [T] => T => T = weird3
-    
+
     def monoPair[T](x: T)(y: T): (T, T) = (x, y)
     val valMonoPair: [T] => T => T => (T,T) = monoPair
-    
+
     def protoPair[T](x: T): [U] => (U) => (T, U) = [U] => (y: U) => (x,y)
     val valProtoPair1: [T] => (T) => [U] => U => (T, U) = protoPair
 
@@ -32,7 +35,7 @@ class EtaExpansionTests{
     type Z
     type X <: Z
     type Y >: X <: Z
-    
+
     //val valId5: [T >: X <: Y ] => X => Z = id //TODO: Fix me
     val valId6: [T >: X <: Y ] => X => Z = [T >: X <: Y ] => id[T]
     /*
