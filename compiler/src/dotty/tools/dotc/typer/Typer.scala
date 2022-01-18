@@ -4000,7 +4000,9 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
               //val paramNames = tpTargs.map(_ => UniqueName.fresh().toTypeName)
               //val targs = tpTargs.map(TypeTree(_))
 
-              val tParams = (paramNames zip tpTargs).map{case (name, bounds) => untpd.TypeDef(name, untpd.TypeTree(bounds)).withAddedFlags(Param)}
+              val tParams = (paramNames zip tpTargs).map{
+                case (name, bounds) => untpd.TypeDef(name, untpd.TypeTree(bounds)).withAddedFlags(Param)
+              }
               val targs = paramNames.map(name => untpd.Ident(name))
               val body = untpd.TypeApply(untpd.TypedSplice(tree), targs)
 
@@ -4042,8 +4044,7 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
           println(res)
           */
           res
-        case wtp => // is it safe to move above into this ? //ie, is it okay to do the ctx.mode check at HERE ?
-          //println("entered case wtp")
+        case wtp =>
           val isStructuralCall = wtp.isValueType && isStructuralTermSelectOrApply(tree)
           if (isStructuralCall)
             readaptSimplified(handleStructural(tree))
