@@ -142,7 +142,6 @@ trait TypesSupport:
           }
           case t: PolyType => {
             val paramBounds = getParamBounds(t)
-            val parsedMethod = parseRefinedElem(name, t.resType)
             if (!paramBounds.isEmpty){
               parseRefinedElem(name, t.resType, plain("[").l ++ paramBounds ++ plain("]").l)
             } else parseRefinedElem(name, t.resType)
