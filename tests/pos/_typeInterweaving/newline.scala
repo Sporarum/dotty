@@ -1,4 +1,4 @@
-class Newline {
+object newline {
   def multipleLines
         [T]
         (x: T)
