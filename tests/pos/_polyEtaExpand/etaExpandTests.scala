@@ -6,6 +6,7 @@ class EtaExpansionTests{
 
     val valId1 /*[T] => T => T*/ = id
     //val valValId1: [T] => T => T = valId1 //TODO: Fix me
+    //val valValId2: Any => Any = valId1 //TODO: Fix me
     val valId2:  Int => Int   = id
     val valId3: [U] => U => U = id
     val valId4: [U <: Int] => U => U = id
@@ -34,6 +35,15 @@ class EtaExpansionTests{
     
     //val valId5: [T >: X <: Y ] => X => Z = id //TODO: Fix me
     val valId6: [T >: X <: Y ] => X => Z = [T >: X <: Y ] => id[T]
+    /*
+    val x: [T] => T => Option[T] = Option.apply
+    val p: (Option[Int], Option[String]) = (1,"foo").map(Option.apply)
+
+    //Out of scope:
+    val x: [T] => T => T = identity(_)
+    val x: [T] => T => T = y => y
+    val x: [T] => T => T = identity[_](_) //creates a [T] => to put in front
+    */
 }
 
 
