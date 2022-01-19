@@ -411,10 +411,18 @@ trait Applications extends Compatibility {
     /** The function's type after widening and instantiating polytypes
      *  with TypeParamRefs in constraint set
      */
-    @threadUnsafe lazy val methType: Type = liftedFunType.widen match {
-      case funType: MethodType => funType
-      case funType: PolyType => instantiateWithTypeVars(funType)
-      case tp => tp //was: funType
+    @threadUnsafe lazy val methType: Type = {
+      def rec(t: Type): Type = {
+        t.widen match{
+          case funType: MethodType => funType
+          case funType: PolyType => 
+            //rec(constrained(funType).resultType) //TODO: Could replace rec(etc) by etc.methType ?
+            rec(instantiateWithTypeVars(funType))
+          case tp => tp
+        }
+      }
+
+      rec(liftedFunType)
     }
 
     @threadUnsafe lazy val liftedFunType: Type =
@@ -692,11 +700,8 @@ trait Applications extends Compatibility {
     final def addArg(arg: TypedArg, formal: Type): Unit = ok = ok & argOK(arg, formal)
     def makeVarArg(n: Int, elemFormal: Type): Unit = {}
     def fail(msg: Message, arg: Arg): Unit =
-      //println(msg)
-      //println(arg)
       ok = false
     def fail(msg: Message): Unit =
-      //println(msg)
       ok = false
     def appPos: SrcPos = NoSourcePosition
     @threadUnsafe lazy val normalizedFun:   Tree = ref(methRef)
