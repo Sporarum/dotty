@@ -404,7 +404,9 @@ trait Applications extends Compatibility {
     private var _ok = true
 
     def ok: Boolean = _ok
-    def ok_=(x: Boolean): Unit = _ok = x
+    def ok_=(x: Boolean): Unit = 
+      //if !x then println("set ok to false")
+      _ok = x
 
     /** The function's type after widening and instantiating polytypes
      *  with TypeParamRefs in constraint set
@@ -453,7 +455,9 @@ trait Applications extends Compatibility {
         // match all arguments with corresponding formal parameters
         matchArgs(orderedArgs, methType.paramInfos, 0)
       case _ =>
-        if (methType.isError) ok = false
+        if (methType.isError) then
+          //println("methType.isError") 
+          ok = false
         else fail(s"$methString does not take parameters")
     }
 
@@ -661,7 +665,7 @@ trait Applications extends Compatibility {
           defn.isFunctionType(argtpe1) && formal.match
             case SAMType(sam) => argtpe <:< sam.toFunctionType(isJava = formal.classSymbol.is(JavaDefined))
             case _ => false
-
+        //println(s"argOK($arg,$formal) = ${isCompatible(argtpe, formal)}")
         isCompatible(argtpe, formal)
         // Only allow SAM-conversion to PartialFunction if implicit conversions
         // are enabled. This is necessary to avoid ambiguity between an overload
@@ -695,8 +699,11 @@ trait Applications extends Compatibility {
     final def addArg(arg: TypedArg, formal: Type): Unit = ok = ok & argOK(arg, formal)
     def makeVarArg(n: Int, elemFormal: Type): Unit = {}
     def fail(msg: Message, arg: Arg): Unit =
+      //println(msg)
+      //println(arg)
       ok = false
     def fail(msg: Message): Unit =
+      //println(msg)
       ok = false
     def appPos: SrcPos = NoSourcePosition
     @threadUnsafe lazy val normalizedFun:   Tree = ref(methRef)
@@ -708,6 +715,7 @@ trait Applications extends Compatibility {
    */
   class ApplicableToTrees(methRef: TermRef, args: List[Tree], resultType: Type, argMatch: ArgMatch)(using Context)
   extends TestApplication(methRef, methRef.widen, args, resultType, argMatch) {
+    //println("ApplicableToTrees created")
     def argType(arg: Tree, formal: Type): Type =
       if untpd.isContextualClosure(arg) && defn.isContextFunctionType(formal) then arg.tpe
       else normalize(arg.tpe, formal)
@@ -1391,8 +1399,10 @@ trait Applications extends Compatibility {
    *  @param  resultType   The expected result type of the application
    */
   def isApplicableMethodRef(methRef: TermRef, args: List[Tree], resultType: Type, keepConstraint: Boolean, argMatch: ArgMatch)(using Context): Boolean = {
+    //println("entered isApplicableMethodRef")
     def isApp(using Context): Boolean =
       new ApplicableToTrees(methRef, args, resultType, argMatch).success
+    //println(isApp) // check above ^
     if (keepConstraint) isApp else explore(isApp)
   }
 
@@ -1754,23 +1764,30 @@ trait Applications extends Compatibility {
      *  probability of pruning the search. result type comparisons are neither cheap nor
      *  do they prune much, on average.
      */
-    def adaptByResult(chosen: TermRef, alts: List[TermRef]) = pt match {
-      case pt: FunProto if !explore(resultConforms(chosen.symbol, chosen, pt.resultType)) =>
-        val conformingAlts = alts.filterConserve(alt =>
-          (alt ne chosen) && explore(resultConforms(alt.symbol, alt, pt.resultType)))
-        conformingAlts match {
-          case Nil => chosen
-          case alt2 :: Nil => alt2
-          case alts2 =>
-            resolveOverloaded(alts2, pt) match {
-              case alt2 :: Nil => alt2
-              case _ => chosen
-            }
-        }
-      case _ => chosen
-    }
+    def adaptByResult(chosen: TermRef, alts: List[TermRef]) = 
+      //println("entered adaptByResult")
+      //println(chosen.symbol.showDcl)
+      //println(alts.map(_.symbol.showDcl)) 
+      pt match {
+        case pt: FunProto if !explore(resultConforms(chosen.symbol, chosen, pt.resultType)) =>
+          //println("pt funproto")
+          val conformingAlts = alts.filterConserve(alt =>
+            (alt ne chosen) && explore(resultConforms(alt.symbol, alt, pt.resultType)))
+          //println(conformingAlts.map(_.symbol.showDcl)) 
+          conformingAlts match {
+            case Nil => chosen
+            case alt2 :: Nil => alt2
+            case alts2 =>
+              resolveOverloaded(alts2, pt) match {
+                case alt2 :: Nil => alt2
+                case _ => chosen
+              }
+          }
+        case _ => chosen
+      }
 
     def resolve(alts: List[TermRef]): List[TermRef] =
+      //println("enter resolve")
       pt match
         case pt: FunProto =>
           if pt.applyKind == ApplyKind.Using then
@@ -1781,11 +1798,18 @@ trait Applications extends Compatibility {
         case _ =>
 
       var found = withoutMode(Mode.ImplicitsEnabled)(resolveOverloaded1(alts, pt))
+      //println("found =")
+      //println(found.map(_.symbol.showDcl))
       if found.isEmpty && ctx.mode.is(Mode.ImplicitsEnabled) then
+        //println("update found")
         found = resolveOverloaded1(alts, pt)
       found match
-        case alt :: Nil => adaptByResult(alt, alts) :: Nil
-        case _ => found
+        case alt :: Nil => 
+          //println("resolve1")
+          adaptByResult(alt, alts) :: Nil
+        case _ =>
+          //println("resolve2") 
+          found
     end resolve
 
     /** Try an apply method, if
@@ -1832,6 +1856,9 @@ trait Applications extends Compatibility {
   private def resolveOverloaded1(alts: List[TermRef], pt: Type)(using Context): List[TermRef] =
     trace(i"resolve over $alts%, %, pt = $pt", typr, show = true) {
     record(s"resolveOverloaded1", alts.length)
+
+    //println(pt.show)
+    //println(pt)
 
     def isDetermined(alts: List[TermRef]) = alts.isEmpty || alts.tail.isEmpty
 
@@ -1932,16 +1959,25 @@ trait Applications extends Compatibility {
         record("resolveOverloaded.FunProto", alts.length)
         val alts1 = narrowBySize(alts)
         //report.log(i"narrowed by size: ${alts1.map(_.symbol.showDcl)}%, %")
+        //println(i"narrowed by size: ${alts1.map(_.symbol.showDcl)}%, %")
         if isDetermined(alts1) then alts1
         else
           record("resolveOverloaded.narrowedBySize", alts1.length)
           val alts2 = narrowByShapes(alts1)
           //report.log(i"narrowed by shape: ${alts2.map(_.symbol.showDcl)}%, %")
-          if isDetermined(alts2) then alts2
+          //println(i"narrowed by shape: ${alts2.map(_.symbol.showDcl)}%, %")
+          if isDetermined(alts2) 
+          then
+            //println("1")
+            //println(alts2.map(_.symbol.showDcl)) 
+            alts2
           else
             record("resolveOverloaded.narrowedByShape", alts2.length)
             pretypeArgs(alts2, pt)
-            narrowByTrees(alts2, pt.typedArgs(normArg(alts2, _, _)), resultType)
+            val res = narrowByTrees(alts2, pt.typedArgs(normArg(alts2, _, _)), resultType)
+            //println("2")
+            //println(res.map(_.symbol.showDcl))
+            res
 
       case pt @ PolyProto(targs1, pt1) =>
         val alts1 = alts.filterConserve(pt.canInstantiate)

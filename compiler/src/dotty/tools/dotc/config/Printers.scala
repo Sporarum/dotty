@@ -33,7 +33,7 @@ object Printers {
   val interactiv = noPrinter
   val matchTypes = noPrinter
   val nullables = noPrinter
-  val overload = noPrinter
+  val overload = default
   val patmatch = noPrinter
   val pickling = noPrinter
   val quotePickling = noPrinter
