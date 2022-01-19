@@ -699,11 +699,8 @@ trait Applications extends Compatibility {
     final def addArg(arg: TypedArg, formal: Type): Unit = ok = ok & argOK(arg, formal)
     def makeVarArg(n: Int, elemFormal: Type): Unit = {}
     def fail(msg: Message, arg: Arg): Unit =
-      //println(msg)
-      //println(arg)
       ok = false
     def fail(msg: Message): Unit =
-      //println(msg)
       ok = false
     def appPos: SrcPos = NoSourcePosition
     @threadUnsafe lazy val normalizedFun:   Tree = ref(methRef)
