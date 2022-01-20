@@ -13,5 +13,5 @@ object functorInterweaving:
   def assertTransformation[F[_]: Functor][A](original: F[A])[B](expected: F[B])(mapping: A => B): Unit =
     assert(expected == summon[Functor[F]].map(original)(mapping))
 
-  @main def test =
+  @main def testInterweaving =
     assertTransformation(List("a", "b"))(List("a1", "b1")){elt => s"${elt}1"}
