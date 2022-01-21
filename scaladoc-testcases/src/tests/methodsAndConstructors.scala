@@ -5,16 +5,18 @@ class B extends A
 class C
 class D[T]
 class E[T] extends D[T]
-
+/*
 class Constructors(a: String):
   def this()
   = this("Ala")
 
   def this(a: A)(b: A)
   = this("Ala")
+*/
 
 /** Some methods to tests */
 class Methods:
+  /*
  def nobraces: A
  = ???
 
@@ -59,7 +61,7 @@ class Methods:
 
  def withImplicitParam2(v: String)(implicit ab: Double, a: Int, b: String): String
  = ???
-
+  */
  def clauseInterweaving[T](x: T)[U](y: U)(using (T,U)): (T,U)
  = ???
 
