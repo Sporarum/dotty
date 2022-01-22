@@ -327,16 +327,22 @@ trait ClassLikeSupport:
       specificKind: (Kind.Def => Kind) = identity
     ): Member =
     val method = methodSymbol.tree.asInstanceOf[DefDef]
-    val paramss: List[ParamClause] = methodSymbol.nonExtensionParamLists
+    val allParamss: List[ParamClause] = method.paramss
+    val nonExtensionParamss: List[ParamClause] = methodSymbol.nonExtensionParamLists
     //val paramLists: List[TermParamClause] = methodSymbol.nonExtensionTermParamLists
     //val genericTypes: List[TypeDef] = if (methodSymbol.isClassConstructor) Nil else methodSymbol.nonExtensionLeadingTypeParams
 
     val memberInfo = unwrapMemberInfo(c, methodSymbol)
 
-    assert(paramss.size == memberInfo.paramLists.size) //zip does not check that
+    assert(allParamss.size == memberInfo.paramLists.size)
+
+    // assumes method is left-associative
+    // finds indices in memberInfo.paramLists corresponding to nonExtensionParamss
+    // probably not going to work, as they are related but not ==
+    val nonExtensionParamssWithIndices = allParamss.zipWithIndex.dropWhile(_._1 != nonExtensionParamss.head)
 
     val basicKind: Kind.Def = Kind.Def(
-      paramss zip memberInfo.paramLists flatMap {
+      nonExtensionParamssWithIndices map ( (clause, i) => (clause, memberInfo.paramLists(i)) ) flatMap {
         case (terms: TermParamClause, EvidenceOnlyParameterList)  => None
         case (terms: TermParamClause, info: RegularParameterList) => 
           Some( TermParametersList( 
@@ -507,7 +513,6 @@ trait ClassLikeSupport:
 
 
   def unwrapMemberInfo(c: ClassDef, symbol: Symbol): MemberInfo =
-    val baseTypeRepr = memberInfo(c, symbol)
 
     def isSyntheticEvidence(name: String) =
       if !name.startsWith(NameKinds.EvidenceParamName.separator) then false else
@@ -557,7 +562,8 @@ trait ClassLikeSupport:
       val newLists: List[TermParameterList] = if newParams.isEmpty   && contextBounds.nonEmpty
         then memberInfo.paramLists ++  Seq(EvidenceOnlyParameterList)
         else memberInfo.paramLists ++ Seq(newParams)
-
+      
+      val baseTypeRepr: TypeRepr = memberInfo(c, symbol)
       MemberInfo(newLists, methodType.resType, contextBounds.toMap)
 
     def handleByNameType(memberInfo: MemberInfo, byNameType: ByNameType): MemberInfo =
