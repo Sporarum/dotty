@@ -11,7 +11,7 @@ class EtaExpansionTests{
     val valId3: [U] => U => U = id
     val valId4: [U <: Int] => U => U = id
 
-    val mapped: (Int, String, Char) = (1, "two", '3').map(id)
+    //val mapped: (Int, String, Char) = (1, "two", '3').map(id) //doesn't work, as id: [T] => T => T instead of [T] => T => F[T] (even tho F[_] could be Id[_])
 
     
     def weird2[T](x: T): Nothing = ???
