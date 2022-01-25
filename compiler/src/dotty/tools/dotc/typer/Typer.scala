@@ -3890,6 +3890,7 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
     end adaptToSubType
 
     def adaptType(tp: Type): Tree = {
+      println("entern adaptType")
       val tree1 =
         if ((pt eq AnyTypeConstructorProto) || tp.typeParamSymbols.isEmpty) tree
         else {
@@ -3939,6 +3940,20 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
         .showing(i"convert creator $tree -> $result", typr)
     
     // private def adapt1(tree: Tree, pt: Type, locked: TypeVars, tryGadtHealing: Boolean)(using Context): Tree
+    println("Tree:")
+    println(tree.show)
+    println(tree)
+    println("Tree type:")
+    println(tree.tpe.show)
+    println(tree.tpe)
+    println("widened tree type:")
+    println(tree.tpe.widen.show)
+    println(tree.tpe.widen)
+    println("Destination type:")
+    println(pt.show)
+    println(pt)
+
+
     tree match {
       case _: MemberDef | _: PackageDef | _: Import | _: WithoutTypeOrPos[?] | _: Closure => tree
       case _ => tree.tpe.widen match {
@@ -3953,7 +3968,7 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
             case _ =>
               adaptOverloaded(ref)
           }
-        case poly: PolyType if !(ctx.mode is Mode.Type) =>
+        case method: PolyType if !(ctx.mode is Mode.Type) =>
           
           /*
           println("Tree:")
@@ -3962,45 +3977,49 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
           println("Tree type:")
           println(tree.tpe.show)
           println(tree.tpe)
-          println("Widened tree type:")
+          println("method:")
           println(tree.tpe.widen.show)
           println(tree.tpe.widen)
           println("Destination type:")
           println(pt.show)
           println(pt)
           */
+          
+          
 
           val res = if tree.symbol.isAllOf(ApplyProxyFlags) then 
-            //println("a")
+            println("a")
             newExpr
           else if pt.isInstanceOf[PolyProto] then
-            //println("b")
+            println("b")
             tree
           else 
-            val tpTargs = poly.paramInfos
+            val methodTargs = method.paramInfos
 
-            //println("c")
-            val (ptTargs: List[TypeBounds], ptRet: Type) = pt match{
+            println("c")
+            val (functionTargs: List[TypeBounds], functionRet: Type) = pt match{
               case RefinedType(_, _, npt: PolyType) => 
                 (npt.paramInfos, npt.resType)
+              case wc: WildcardType if wc.effectiveBounds.contains(method) =>
+                (methodTargs, method.resType)
               case _ => (Nil, NoType)
             }
             /*
             println("Type params:")
             println("tp:")
-            println(tpTargs)
+            println(methodTargs)
             println("pt:")
-            println(ptTargs)
+            println(functionTargs)
             */
             
-            if (ptTargs corresponds tpTargs)(_ <:< _) then
+            if (functionTargs corresponds methodTargs)(_ <:< _) then
               //println("Entered if")
-              //val targs = ptTargs.map(t => tpd.TypeTree(t))
-              val paramNames = poly.paramNames.map(n => UniqueName.fresh(n)) //Should be pt or tp names ?
-              //val paramNames = tpTargs.map(_ => UniqueName.fresh().toTypeName)
-              //val targs = tpTargs.map(TypeTree(_))
+              //val targs = functionTargs.map(t => tpd.TypeTree(t))
+              val paramNames = method.paramNames.map(n => UniqueName.fresh(n)) //Should be pt or tp names ?
+              //val paramNames = methodTargs.map(_ => UniqueName.fresh().toTypeName)
+              //val targs = methodTargs.map(TypeTree(_))
 
-              val tParams = (paramNames zip tpTargs).map{
+              val tParams = (paramNames zip methodTargs).map{
                 case (name, bounds) => untpd.TypeDef(name, untpd.TypeTree(bounds)).withAddedFlags(Param)
               }
               val targs = paramNames.map(name => untpd.Ident(name))
@@ -4021,7 +4040,7 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
             /*
             
 
-            if npt <:< poly then
+            if npt <:< method then
               // cree un object avec une methode polymorphique:
               val res = AnonClass(List(defn.PolyFunctionType), List(tree.symbol.asTerm), List(nme.apply))
               //println(defn.PolyFunctionType)
@@ -4036,7 +4055,9 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
               var typeArgs = tree match
                 case Select(qual, nme.CONSTRUCTOR) => qual.tpe.widenDealias.argTypesLo.map(TypeTree)
                 case _ => Nil
-              if typeArgs.isEmpty then typeArgs = constrained(poly, tree)._2
+              if typeArgs.isEmpty then typeArgs = constrained(method, tree)._2
+              println("typeArgs:")
+              println(typeArgs)
               convertNewGenericArray(readapt(tree.appliedToTypeTrees(typeArgs)))
           /*
           println("Final res:")
@@ -4053,9 +4074,10 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
               if tree.symbol.isAllOf(ApplyProxyFlags) then newExpr
               else adaptToArgs(wtp, pt)
             case pt: PolyProto if !wtp.isImplicitMethod =>
+              println("entered case PolyProto")
               tryInsertApplyOrImplicit(tree, pt, locked)(tree) // error will be reported in typedTypeApply
             case _ =>
-              //println("entered case _")
+              println("entered case _")
               if (ctx.mode is Mode.Type) adaptType(tree.tpe)
               else {
                 /*

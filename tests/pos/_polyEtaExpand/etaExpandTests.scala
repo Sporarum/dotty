@@ -5,8 +5,8 @@ class EtaExpansionTests{
     def id[T](x: T) = x
 
     val valId1 /*[T] => T => T*/ = id
-    //val valValId1: [T] => T => T = valId1 //TODO: Fix me
-    //val valValId2: Any => Any = valId1 //TODO: Fix me
+    val valValId1: [T] => T => T = valId1
+    val valValId2: Any => Any = valId1 //TODO: Fix me
     val valId2:  Int => Int   = id
     val valId3: [U] => U => U = id
     val valId4: [U <: Int] => U => U = id
