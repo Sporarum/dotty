@@ -3953,98 +3953,43 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
             case _ =>
               adaptOverloaded(ref)
           }
-        case method: PolyType if !(ctx.mode is Mode.Type) =>
-          
-          /*
-          println("Tree:")
-          println(tree.show)
-          println(tree)
-          println("Tree type:")
-          println(tree.tpe.show)
-          println(tree.tpe)
-          println("Widened tree type:")
-          println(tree.tpe.widen.show)
-          println(tree.tpe.widen)
-          println("Destination type:")
-          println(pt.show)
-          println(pt)
-          */
+        case poly: PolyType if !(ctx.mode is Mode.Type) =>
 
-          val res = if tree.symbol.isAllOf(ApplyProxyFlags) then 
-            //println("a")
+          if tree.symbol.isAllOf(ApplyProxyFlags) then 
             newExpr
           else if pt.isInstanceOf[PolyProto] then
-            //println("b")
             tree
-          else 
-            val methodTargs = method.paramInfos
+          else
+            val methodTargs = poly.paramInfos
 
-            //println("c")
             val (functionTargs: List[TypeBounds], functionParamNames: List[TypeName]) = pt match{
-              case RefinedType(_, _, npt: PolyType) => 
-                (npt.paramInfos, npt.paramNames)
+              case RefinedType(_, _, npt: PolyType) => (npt.paramInfos, npt.paramNames)
               case _ => (Nil, Nil)
             }
-            /*
-            println("Type params:")
-            println("tp:")
-            println(methodTargs)
-            println("pt:")
-            println(functionTargs)
-            */
             
+            /** If the (destination) function's type args are each subtypes of the corresponding
+             *  method type args, we eta-expand the method to a function with the expected type arguments
+            */ 
             if (functionTargs corresponds methodTargs)(_ <:< _) then
-              //println("Entered if")
-              //val targs = functionTargs.map(t => tpd.TypeTree(t))
-              //val paramNames = method.paramNames.map(n => UniqueName.fresh(n)) //Should be pt or tp names ?
               val paramNames = functionParamNames.map(n => UniqueName.fresh(n)) //Should be pt or tp names ?
-              //val paramNames = methodTargs.map(_ => UniqueName.fresh().toTypeName)
-              //val targs = methodTargs.map(TypeTree(_))
 
               val tParams = (paramNames zip functionTargs).map{
                 case (name, bounds) => untpd.TypeDef(name, untpd.TypeTree(bounds)).withAddedFlags(Param)
               }
+
               val targs = paramNames.map(name => untpd.Ident(name))
               val body = untpd.TypeApply(untpd.TypedSplice(tree), targs)
 
+              // [tParams] => tree[targs]
               val res = untpd.PolyFunction(tParams, body)
-              /*
-              println("Res:")
-              println(res.show)
-              println(res)
-              //println(res.tpe.show)
-              //println(res.tpe)
-              //println(res.tpe.widen)
-              */
-              //res
-              typed(res, pt)
-            
-            /*
-            
 
-            if npt <:< poly then
-              // cree un object avec une methode polymorphique:
-              val res = AnonClass(List(defn.PolyFunctionType), List(tree.symbol.asTerm), List(nme.apply))
-              //println(defn.PolyFunctionType)
-              //println(res.show)
-              //println(res)
-              //println(res.tpe.show)
-              //println(res.tpe)
-              //println(res.tpe.widen)
-              res
-              */
+              typed(res, pt)
             else
               var typeArgs = tree match
                 case Select(qual, nme.CONSTRUCTOR) => qual.tpe.widenDealias.argTypesLo.map(TypeTree)
                 case _ => Nil
-              if typeArgs.isEmpty then typeArgs = constrained(method, tree)._2
+              if typeArgs.isEmpty then typeArgs = constrained(poly, tree)._2
               convertNewGenericArray(readapt(tree.appliedToTypeTrees(typeArgs)))
-          /*
-          println("Final res:")
-          println(res.show)
-          println(res)
-          */
-          res
         case wtp =>
           val isStructuralCall = wtp.isValueType && isStructuralTermSelectOrApply(tree)
           if (isStructuralCall)
@@ -4056,20 +4001,8 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
             case pt: PolyProto if !wtp.isImplicitMethod =>
               tryInsertApplyOrImplicit(tree, pt, locked)(tree) // error will be reported in typedTypeApply
             case _ =>
-              //println("entered case _")
               if (ctx.mode is Mode.Type) adaptType(tree.tpe)
-              else {
-                /*
-                println(tree.show)
-                println(tree)
-                println(pt.show)
-                println(pt)
-                println()
-                println()
-                */
-
-                adaptNoArgs(wtp)
-              }
+              else adaptNoArgs(wtp)
           }
       }
     }

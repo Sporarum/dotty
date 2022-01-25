@@ -413,9 +413,7 @@ trait Applications extends Compatibility {
       def rec(t: Type): Type = {
         t.widen match{
           case funType: MethodType => funType
-          case funType: PolyType => 
-            //rec(constrained(funType).resultType) //TODO: Could replace rec(etc) by etc.methType ?
-            rec(instantiateWithTypeVars(funType))
+          case funType: PolyType => rec(instantiateWithTypeVars(funType))
           case tp => tp
         }
       }
