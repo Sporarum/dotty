@@ -36,17 +36,11 @@ class EtaExpansionTests{
     type X <: Z
     type Y >: X <: Z
 
-    //val valId5: [T >: X <: Y ] => X => Z = id //TODO: Fix me
+    val valId5: [T >: X <: Y ] => X => Z = id
     val valId6: [T >: X <: Y ] => X => Z = [T >: X <: Y ] => id[T]
-    /*
+    
     val x: [T] => T => Option[T] = Option.apply
     val p: (Option[Int], Option[String]) = (1,"foo").map(Option.apply)
-
-    //Out of scope:
-    val x: [T] => T => T = identity(_)
-    val x: [T] => T => T = y => y
-    val x: [T] => T => T = identity[_](_) //creates a [T] => to put in front
-    */
 }
 
 

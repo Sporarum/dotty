@@ -3953,7 +3953,7 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
             case _ =>
               adaptOverloaded(ref)
           }
-        case poly: PolyType if !(ctx.mode is Mode.Type) =>
+        case method: PolyType if !(ctx.mode is Mode.Type) =>
           
           /*
           println("Tree:")
@@ -3977,30 +3977,31 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
             //println("b")
             tree
           else 
-            val tpTargs = poly.paramInfos
+            val methodTargs = method.paramInfos
 
             //println("c")
-            val (ptTargs: List[TypeBounds], ptRet: Type) = pt match{
+            val (functionTargs: List[TypeBounds], functionParamNames: List[TypeName]) = pt match{
               case RefinedType(_, _, npt: PolyType) => 
-                (npt.paramInfos, npt.resType)
-              case _ => (Nil, NoType)
+                (npt.paramInfos, npt.paramNames)
+              case _ => (Nil, Nil)
             }
             /*
             println("Type params:")
             println("tp:")
-            println(tpTargs)
+            println(methodTargs)
             println("pt:")
-            println(ptTargs)
+            println(functionTargs)
             */
             
-            if (ptTargs corresponds tpTargs)(_ <:< _) then
+            if (functionTargs corresponds methodTargs)(_ <:< _) then
               //println("Entered if")
-              //val targs = ptTargs.map(t => tpd.TypeTree(t))
-              val paramNames = poly.paramNames.map(n => UniqueName.fresh(n)) //Should be pt or tp names ?
-              //val paramNames = tpTargs.map(_ => UniqueName.fresh().toTypeName)
-              //val targs = tpTargs.map(TypeTree(_))
+              //val targs = functionTargs.map(t => tpd.TypeTree(t))
+              //val paramNames = method.paramNames.map(n => UniqueName.fresh(n)) //Should be pt or tp names ?
+              val paramNames = functionParamNames.map(n => UniqueName.fresh(n)) //Should be pt or tp names ?
+              //val paramNames = methodTargs.map(_ => UniqueName.fresh().toTypeName)
+              //val targs = methodTargs.map(TypeTree(_))
 
-              val tParams = (paramNames zip tpTargs).map{
+              val tParams = (paramNames zip functionTargs).map{
                 case (name, bounds) => untpd.TypeDef(name, untpd.TypeTree(bounds)).withAddedFlags(Param)
               }
               val targs = paramNames.map(name => untpd.Ident(name))
@@ -4036,7 +4037,7 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
               var typeArgs = tree match
                 case Select(qual, nme.CONSTRUCTOR) => qual.tpe.widenDealias.argTypesLo.map(TypeTree)
                 case _ => Nil
-              if typeArgs.isEmpty then typeArgs = constrained(poly, tree)._2
+              if typeArgs.isEmpty then typeArgs = constrained(method, tree)._2
               convertNewGenericArray(readapt(tree.appliedToTypeTrees(typeArgs)))
           /*
           println("Final res:")
