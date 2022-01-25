@@ -4,7 +4,8 @@ class EtaExpansionTests{
         
     def id[T](x: T) = x
 
-    val valId1 /*[T] => T => T*/ = id
+    val valId1 /*Any => Any*/ = id
+    //val valId1 /*[T] => T => T*/ = id can be implemented safely if both it and valValId2 compile
     //val valValId1: [T] => T => T = valId1 //TODO: Fix me
     //val valValId2: Any => Any = valId1 //TODO: Fix me
     val valId2:  Int => Int   = id
@@ -40,7 +41,8 @@ class EtaExpansionTests{
     val valId6: [T >: X <: Y ] => X => Z = [T >: X <: Y ] => id[T]
     
     val x: [T] => T => Option[T] = Option.apply
-    val p: (Option[Int], Option[String]) = (1,"foo").map(Option.apply)
+    // Can be re-added when https://github.com/lampepfl/dotty/pull/14350 is solved
+    //val p: (Option[Int], Option[String]) = (1,"foo").map(Option.apply)
 }
 
 
