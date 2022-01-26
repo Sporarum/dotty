@@ -1086,8 +1086,6 @@ trait Applications extends Compatibility {
     val typedArgs = if (isNamed) typedNamedArgs(tree.args) else tree.args.mapconserve(typedType(_))
     record("typedTypeApply")
     typedExpr(tree.fun, PolyProto(typedArgs, pt)) match {
-      case _: TypeApply if !ctx.isAfterTyper =>
-        errorTree(tree, "illegal repeated type application")
       case typedFn =>
         typedFn.tpe.widen match {
           case pt: PolyType =>
