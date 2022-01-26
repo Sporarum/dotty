@@ -642,8 +642,8 @@ class CompletionTest {
   @Test def completeExtensionMethodWithTypeParameter: Unit = {
     code"""object Foo
           |extension (foo: Foo.type) def xxxx[A]: Int = 1
-          |object Main { Foo.xx${m1} }"""
-      .completion(("xxxx", Method, "[A] => Int"))
+          |object Main { Foo.xx${m1} }""".withSource
+      .completion(m1, Set(("xxxx", Method, "[A]: Int")))
   }
 
   @Test def completeExtensionMethodWithParameterAndTypeParameter: Unit = {
@@ -761,8 +761,8 @@ class CompletionTest {
           |given Bar with {}
           |given Baz with {}
           |extension [A](using bar: Bar)(a: A)(using baz: Baz) def xxxx[B]: Either[A, B] = Left(a)
-          |object Main { 123.xx${m1} }"""
-      .completion(("xxxx", Method, "(using baz: Baz): [B] => Either[Int, B]"))
+          |object Main { 123.xx${m1} }""".withSource
+      .completion(m1, Set(("xxxx", Method, "(using baz: Baz)[B]: Either[Int, B]")))
   }
 
   @Test def completeExtensionMethodWithTypeBounds: Unit = {
@@ -771,8 +771,8 @@ class CompletionTest {
           |given Bar with {}
           |extension [A >: Bar](a: A) def xxxx[B <: a.type]: Either[A, B] = Left(a)
           |val foo = new Foo {}
-          |object Main { foo.xx${m1} }"""
-      .completion(("xxxx", Method, "[B <: (foo : Foo)] => Either[Foo, B]"))
+          |object Main { foo.xx${m1} }""".withSource
+          .completion(m1, Set(("xxxx", Method, "[B <: (foo : Foo)]: Either[Foo, B]")))
   }
 
   @Test def completeInheritedExtensionMethod: Unit = {
