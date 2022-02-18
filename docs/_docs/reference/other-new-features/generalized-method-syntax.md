@@ -61,7 +61,7 @@ val helloes = filled[4]("Hello!") // S=4, and T is inferred
 
 ### Application
 
-Method application is unchanged, in cases where multiple type clauses are expected but not all are passed, the leftmost ones are inferred.
+Method application is unchanged, in cases where multiple type clauses are expected but not all are passed, the rightmost ones are inferred.
 
 In particular, the following does not type check, even though the argument `Char` is only valid for `C`:
 ```scala
