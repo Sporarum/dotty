@@ -140,7 +140,7 @@ trait ClassLikeSupport:
       case dd: DefDef if isDocumentableExtension(dd.symbol) =>
         dd.symbol.extendedSymbol.map { extSym =>
           val memberInfo = unwrapMemberInfo(c, dd.symbol)
-          val typeParams = dd.symbol.extendedTypeParams.map(mkTypeArgument(_, memberInfo.genericTypes))
+          val typeParams = dd.symbol.extendedLeadingTypeParams.map(mkTypeArgument(_, memberInfo.genericTypes))
           val termParams = dd.symbol.extendedTermParamLists.zipWithIndex.flatMap { case (paramList, index) =>
             memberInfo.paramLists(index) match
               case EvidenceOnlyParameterList => Nil

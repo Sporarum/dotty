@@ -172,41 +172,36 @@ object SymOps:
           )
         case _ => Nil -> Nil
 
-    def extendedTypeParams: List[reflect.TypeDef] =
-      import reflect.*
-      sym.tree match
-        case tree: DefDef =>
-          tree.leadingTypeParams
-        case _ => Nil
+    def extendedParamLists: List[reflect.ParamClause] = sym.splitExtensionParamList._1
 
-    def extendedTermParamLists: List[reflect.TermParamClause] =
-      import reflect.*
-      sym.splitExtensionParamList._1.collect {
-        case tpc: TermParamClause => tpc
+    def extendedTypeParamLists: List[reflect.TypeParamClause] =
+      sym.extendedParamLists.collect {
+        case typeClause: reflect.TypeParamClause => typeClause
       }
 
-    def nonExtensionTermParamLists: List[reflect.TermParamClause] =
-      import reflect.*
-      if sym.nonExtensionLeadingTypeParams.nonEmpty then
-        sym.nonExtensionParamLists.dropWhile {
-          case _: TypeParamClause => false
-          case _ => true
-        }.drop(1).collect {
-          case tpc: TermParamClause => tpc
-        }
-      else
-        sym.nonExtensionParamLists.collect {
-          case tpc: TermParamClause => tpc
-        }
+    def extendedLeadingTypeParams: List[reflect.TypeDef] =
+      sym.extendedTypeParamLists.headOption.map(_.params).getOrElse(List())
+
+    def extendedTermParamLists: List[reflect.TermParamClause] =
+      sym.extendedParamLists.collect {
+        case tpc: reflect.TermParamClause => tpc
+      }
 
     def nonExtensionParamLists: List[reflect.ParamClause] =
       sym.splitExtensionParamList._2
 
+    def nonExtensionTermParamLists: List[reflect.TermParamClause] =
+      sym.nonExtensionParamLists.collect {
+        case tpc: reflect.TermParamClause => tpc
+      }
+
+    def nonExtensionTypeParamLists: List[reflect.TypeParamClause] =
+      sym.nonExtensionParamLists.collect {
+        case typeClause: reflect.TypeParamClause => typeClause
+      }
+
     def nonExtensionLeadingTypeParams: List[reflect.TypeDef] =
-      import reflect.*
-      sym.nonExtensionParamLists.collectFirst {
-        case TypeParamClause(params) => params
-      }.toList.flatten
+      sym.nonExtensionTypeParamLists.headOption.map(_.params).getOrElse(List())
 
   end extension
 
