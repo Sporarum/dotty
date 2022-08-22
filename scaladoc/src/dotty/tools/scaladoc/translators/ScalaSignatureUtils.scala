@@ -26,7 +26,7 @@ case class SignatureBuilder(content: Signature = Nil) extends ScalaSignatureUtil
   def annotationsBlock(d: Member): SignatureBuilder =
     d.annotations.foldLeft(this){ (bdr, annotation) => bdr.buildAnnotation(annotation)}
 
-  def annotationsInline(d: Parameter): SignatureBuilder =
+  def annotationsInline(d: TermParameter): SignatureBuilder =
     d.annotations.foldLeft(this){ (bdr, annotation) => bdr.buildAnnotation(annotation) }
 
   def annotationsInline(t: TypeParameter): SignatureBuilder =
@@ -74,14 +74,17 @@ case class SignatureBuilder(content: Signature = Nil) extends ScalaSignatureUtil
   def kind(k: Kind) =
     keyword(k.name + " ")
 
-  def generics(on: Seq[TypeParameter]) = list(on.toList, List(Plain("[")), List(Plain("]"))){ (bdr, e) =>
+  def generics(on: TypeParameterList) = list(on.toList, List(Plain("[")), List(Plain("]"))){ (bdr, e) =>
     bdr.annotationsInline(e).keyword(e.variance).tpe(e.name, Some(e.dri)).signature(e.signature)
   }
 
-  def functionParameters(params: Seq[ParametersList]) =
-    if params.isEmpty then this.plain("")
-    else if params.size == 1 && params(0).parameters == Nil then this.plain("()")
-    else this.list(params, separator = List(Plain(""))) { (bld, pList) =>
+  def functionParameters(paramss: Seq[TermParameterList]) =
+    /*
+    if paramss.isEmpty then this.plain("")
+    else if paramss.size == 1 && paramss(0).parameters == Nil then this.plain("()")
+    else 
+    */
+    this.list(paramss, separator = List(Plain(""))) { (bld, pList) =>
       bld.list(pList.parameters, prefix = List(Plain("("), Keyword(pList.modifiers)), suffix = List(Plain(")")), forcePrefixAndSuffix = true) { (bld, p) =>
         val annotationsAndModifiers = bld.annotationsInline(p)
           .keyword(p.modifiers)
