@@ -143,7 +143,9 @@ object SymOps:
       import reflect._
       sym.flags.is(Flags.Artifact)
 
-    def isLeftAssoc: Boolean = !sym.name.endsWith(":")
+    def isRightAssoc: Boolean = sym.name.endsWith(":")
+
+    def isLeftAssoc: Boolean = !sym.isRightAssoc
 
     def extendedSymbol: Option[reflect.ValDef] =
       import reflect.*
