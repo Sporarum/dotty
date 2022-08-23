@@ -342,16 +342,10 @@ trait ClassLikeSupport:
     ): Member =
     val method = methodSymbol.tree.asInstanceOf[DefDef]
     val paramLists = methodSymbol.nonExtensionParamLists
-    //val termParamLists: List[TermParamClause] = methodSymbol.nonExtensionTermParamLists
-    //val typeParamLists: List[TypeParamClause] = methodSymbol.nonExtensionTypeParamLists
-    //val genericTypes: List[TypeDef] = typeParamLists.headOption.map(_.params).getOrElse(List())
 
     val memberInfo = unwrapMemberInfo(c, methodSymbol)
 
     val unshuffledMemberInfoParamLists = 
-      /*if methodSymbol.isClassConstructor then
-        memberInfo.paramLists.dropWhile(_.isType)
-      else*/ 
       if methodSymbol.isExtensionMethod && methodSymbol.isRightAssoc then
         // Taken from RefinedPrinter.scala
         // we have the following encoding of tree.paramss:
@@ -387,38 +381,6 @@ trait ClassLikeSupport:
 
     val croppedUnshuffledMemberInfoParamLists = unshuffledMemberInfoParamLists.takeRight(paramLists.length)
 
-    def debug = s"""|paramLists:
-                |${paramLists.map(_.params.map(_.show))}
-                |memberInfo.paramLists:
-                |${memberInfo.paramLists.map{
-                  case MemberInfo.RegularParameterList(terms) => terms.keys
-                  case MemberInfo.TypeParameterList(types) => types.keys
-                  case MemberInfo.EvidenceOnlyParameterList => MemberInfo.EvidenceOnlyParameterList
-                }}
-                |unshuffledMemberInfoParamLists:
-                |${unshuffledMemberInfoParamLists.map{
-                  case MemberInfo.RegularParameterList(terms) => terms.keys
-                  case MemberInfo.TypeParameterList(types) => types.keys
-                  case MemberInfo.EvidenceOnlyParameterList => MemberInfo.EvidenceOnlyParameterList
-                }}
-                |croppedUnshuffledMemberInfoParamLists:
-                |${croppedUnshuffledMemberInfoParamLists.map{
-                  case MemberInfo.RegularParameterList(terms) => terms.keys
-                  case MemberInfo.TypeParameterList(types) => types.keys
-                  case MemberInfo.EvidenceOnlyParameterList => MemberInfo.EvidenceOnlyParameterList
-                }}
-                |""".stripMargin
-    /*
-    println(debug)
-    */
-    /*
-    println(s"""|memberInfo.termParamLists:
-                |${memberInfo.termParamLists.map(_.asInstanceOf[RegularParameterList].m.keys)}
-                |memberInfo.genericTypes:
-                |${memberInfo.genericTypes.keys}
-                |""".stripMargin)" +
-                  */
-
     val basicDefKind: Kind.Def = Kind.Def(
       paramLists.zip(croppedUnshuffledMemberInfoParamLists).flatMap{
         case (_: TermParamClause, MemberInfo.EvidenceOnlyParameterList) => Nil
@@ -429,7 +391,7 @@ trait ClassLikeSupport:
         case (TypeParamClause(genericTypeList), MemberInfo.TypeParameterList(memInfoTypes)) =>
           Some(Right(genericTypeList.map(mkTypeArgument(_, memInfoTypes, memberInfo.contextBounds))))
         case (_,_) =>
-          assert(false, s"unshuffledMemberInfoParamLists and SymOps.nonExtensionParamLists disagree on whether this clause is a type or term one:\n${methodSymbol}\n$debug")
+          assert(false, s"croppedUnshuffledMemberInfoParamLists and SymOps.nonExtensionParamLists disagree on whether this clause is a type or term one")
       }
     )
 
