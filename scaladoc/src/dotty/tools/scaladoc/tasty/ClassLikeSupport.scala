@@ -348,22 +348,6 @@ trait ClassLikeSupport:
     val unshuffledMemberInfoParamLists = 
       if methodSymbol.isExtensionMethod && methodSymbol.isRightAssoc then
         // Taken from RefinedPrinter.scala
-        // we have the following encoding of tree.paramss:
-        //   (leadingTyParamss ++ leadingUsing
-        //      ++ rightTyParamss ++ rightParamss
-        //      ++ leftParamss ++ trailingUsing ++ rest)
-        //   e.g.
-        //     extension [A](using B)(c: C)(using D)
-        //       def %:[E](f: F)(g: G)(using H): Res = ???
-        //   will have the following values:
-        //   - leadingTyParamss = List(`[A]`)
-        //   - leadingUsing = List(`(using B)`)
-        //   - rightTyParamss = List(`[E]`)
-        //   - rightParamss = List(`(f: F)`)
-        //   - leftParamss = List(`(c: C)`)
-        //   - trailingUsing = List(`(using D)`)
-        //   - rest = List(`(g: G)`, `(using H)`)
-        // we need to swap (rightTyParams ++ rightParamss) with (leftParamss ++ trailingUsing)
         val (leadingTyParamss, rest1) = memberInfo.paramLists.span(_.isType)
         val (leadingUsing, rest2) = rest1.span(_.isUsing)
         val (rightTyParamss, rest3) = rest2.span(_.isType)
@@ -544,12 +528,6 @@ trait ClassLikeSupport:
     val genericTypes: Map[String, TypeBounds] = paramLists.collect{ case MemberInfo.TypeParameterList(types) => types }.headOption.getOrElse(Map())
     
     val termParamLists: List[MemberInfo.ParameterList] = paramLists.filter(_.isTerm)
-    
-    /*
-    val termParamLists: List[TermParameterList] = paramLists.collect{
-      case tl: TermParameterList => tl
-    }
-    */
   }
 
   object MemberInfo:
