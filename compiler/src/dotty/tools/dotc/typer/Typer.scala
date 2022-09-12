@@ -4131,20 +4131,21 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
 
                 val etaTermParamNames = subMethod.paramNames.map( UniqueName.fresh(_) )
 
-                val termArgs = etaTermParamNames.map( untpd.Ident(_) )
-
                 val methodTermParams = subMethod.paramInfos
                 println(methodTermParams.map(_.show))
-                val etaTermParams = (etaTermParamNames zip methodTermParams).map((name, tpe) => untpd.ValDef(name, untpd.TypeTree(tpe), untpd.EmptyTree).withAddedFlags(Param))
+                val etaTermSymbols = (etaTermParamNames zip methodTermParams).map( (name, tpe) => Symbols.newSymbol(ctx.owner, name, Param, tpe, coord = tree.span) )
 
+                val etaTermParams = etaTermSymbols.map(sym => tpd.ValDef(sym))
 
-                val tArgs = etaTypeParamNames.map(name => untpd.Ident(name))
+                val termArgs = etaTermParams.map( tpd.Ident(_) )
+                
+                //val tArgs = typeRefArgs.map(ref => tpd.TypeTree(ref))
                 
                 // tree[tArgs](termArgs)
-                val body = untpd.Apply( untpd.TypeApply( untpd.TypedSplice(tree), tArgs), termArgs )
+                val body = tree.appliedToTypes(typeRefArgs).appliedToArgs(termArgs)
 
                 // [etaTypeParamsOld] => (etaTermParams) => tree[tArgs](termArgs)
-                val res = untpd.PolyFunction(etaTypeParams2, untpd.Function(etaTermParams, body))
+                val res = tpd.Lambda(subMethod, termArgs => tree.appliedToTypes(typeRefArgs).appliedToArgs(termArgs))//tpd.PolyFunction(etaTypeParams2, tpd.Function(etaTermParams, body))
                 print(s"""
                          |Result:
                          |${res.show}
