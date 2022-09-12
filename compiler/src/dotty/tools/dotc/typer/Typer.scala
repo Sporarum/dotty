@@ -4114,67 +4114,88 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
             ???
           else
             println("else")
-            val methodTypeParams = poly.paramInfos
-            val subMethod = poly.resType.asInstanceOf[MethodType]
+            pt match
+              case RefinedType(_, _, npt: PolyType) => // Should be something that matches specifically PolyFunction instead
+                println()
+                println(npt.paramRefs.map(_.show))
+                println(npt.paramRefs)
 
-            val functionOp: Option[PolyType] = pt match
-              case RefinedType(_, _, npt: PolyType) => Some(npt)
-              case _ => None
+                val functionTypeParamBounds: List[TypeBounds] = npt.paramInfos
+                val functionTypeParamNames: List[TypeName] = npt.paramNames
 
-            val (functionTypeParams: List[TypeBounds], functionTypeParamNames: List[TypeName]) = functionOp match{
-              case Some(npt: PolyType) => (npt.paramInfos, npt.paramNames)
-              case None => (Nil, Nil)
-            }
-            
-            val (functionTermParams: List[Type], functionTermParamNames: List[TermName]) = functionOp match{
-              case Some(npt: PolyType) => 
                 val subFunction = npt.resType.asInstanceOf[MethodType]
-                (subFunction.paramInfos, subFunction.paramNames)
-              case _ => (Nil, Nil)
-            }
 
-            def allSubtypes(a: List[Type], b: List[Type]): Boolean =
-              (a corresponds b)(_ <:< _)
+                val functionTermParams: List[Type] = subFunction.paramInfos
+                val functionTermParamNames: List[TermName] = subFunction.paramNames
 
-            /** If the (destination) function's type args are each subtypes of the corresponding
-             *  method type args, we eta-expand the method to a function with the expected type arguments
-            */ 
-            if allSubtypes(functionTypeParams, methodTypeParams) then
-              println("Types match")
 
-              val subMethod = poly.appliedTo(functionOp.get.paramRefs).asInstanceOf[MethodType]
-              val methodTermParams = subMethod.paramInfos
+                val etaTypeParamNames = functionTypeParamNames.map( UniqueName.fresh(_) )
 
-              if allSubtypes(functionTermParams, methodTermParams) then
-                println("Terms match")
+                val etaTypeParamsOld = (etaTypeParamNames zip functionTypeParamBounds).map{
+                  case (name, bounds) => untpd.TypeDef(name, untpd.TypeTree(bounds)).withAddedFlags(Param)
+                }
+
+                println()
+                println(etaTypeParamsOld.map(_.show))
+                println(etaTypeParamsOld)
+                println(etaTypeParamsOld.map(_.name))
+                println(etaTypeParamsOld.map(_.symbol)) // .symbol should be defined
+
+
+                val etaTypeParams = Symbols.newTypeParams(owner = ctx.owner, etaTypeParamNames, Param, _ => functionTypeParamBounds)
+
+                val etaTypeParams2 = etaTypeParams.map( sym => tpd.TypeDef(sym) )
+
+                println()
+                println(etaTypeParams.map(_.show))
+                println(etaTypeParams)
+                println(etaTypeParams.map(_.name))
+
+                val typeRefArgs = etaTypeParams.map{ TypeRef(NoPrefix, _) }
+                println()
+                println(typeRefArgs.map(_.show))
+                println(typeRefArgs)
+                val subMethod = poly.appliedTo(typeRefArgs).asInstanceOf[MethodType]
+                println()
+                println(poly.show)
+                println(poly)
+                println()
+                println(poly.resultType.show)
+                println(poly.resultType)
+                println()
+                println(subMethod.show)
+                println(subMethod)
+
+                val etaTermParamNames = subMethod.paramNames.map( UniqueName.fresh(_) )
+
+                val termArgs = etaTermParamNames.map( untpd.Ident(_) )
+
+                val methodTermParams = subMethod.paramInfos
+                println(methodTermParams.map(_.show))
+                val etaTermParams = (etaTermParamNames zip methodTermParams).map((name, tpe) => untpd.ValDef(name, untpd.TypeTree(tpe), untpd.EmptyTree).withAddedFlags(Param))
+
+
+                val tArgs = etaTypeParamNames.map(name => untpd.Ident(name))
                 
-                
+                // tree[tArgs](termArgs)
+                val body = untpd.Apply( untpd.TypeApply( untpd.TypedSplice(tree), tArgs), termArgs )
 
-              else
-                println("Terms don't match")
-
-
-
-              val paramNames = functionTypeParamNames.map(n => UniqueName.fresh(n)) //Should be pt or tp names ?
-
-              val tParams = (paramNames zip functionTypeParams).map{
-                case (name, bounds) => untpd.TypeDef(name, untpd.TypeTree(bounds)).withAddedFlags(Param)
-              }
-
-              val targs = paramNames.map(name => untpd.Ident(name))
-              val body = untpd.TypeApply(untpd.TypedSplice(tree), targs)
-
-              // [tParams] => tree[targs]
-              val res = untpd.PolyFunction(tParams, body)
-
-              typed(res, pt)
-            else
-              println("Types don't match")
-              var typeArgs = tree match
-                case Select(qual, nme.CONSTRUCTOR) => qual.tpe.widenDealias.argTypesLo.map(TypeTree(_))
-                case _ => Nil
-              if typeArgs.isEmpty then typeArgs = constrained(poly, tree)._2
-              convertNewGenericArray(readapt(tree.appliedToTypeTrees(typeArgs)))
+                // [etaTypeParamsOld] => (etaTermParams) => tree[tArgs](termArgs)
+                val res = untpd.PolyFunction(etaTypeParams2, untpd.Function(etaTermParams, body))
+                print(s"""
+                         |Result:
+                         |${res.show}
+                         |$res
+                         |""".stripMargin)
+                typed(res, pt)
+                  
+              case _ =>
+                //TODO
+                var typeArgs = tree match
+                  case Select(qual, nme.CONSTRUCTOR) => qual.tpe.widenDealias.argTypesLo.map(TypeTree(_))
+                  case _ => Nil
+                if typeArgs.isEmpty then typeArgs = constrained(poly, tree)._2
+                convertNewGenericArray(readapt(tree.appliedToTypeTrees(typeArgs)))
         case wtp =>
           val isStructuralCall = wtp.isValueType && isStructuralTermSelectOrApply(tree)
           if (isStructuralCall)
