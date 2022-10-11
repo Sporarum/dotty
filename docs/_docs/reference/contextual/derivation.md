@@ -26,6 +26,68 @@ given [T: Show]     : Show[Tree[T]]     = Show.derived
 
 We say that `Tree` is the _deriving type_ and that the `Eq`, `Ordering` and `Show` instances are _derived instances_.
 
+## Exact mechanism
+More formally, for a class/trait/object/enum `DerivingType[T_1, ..., T_N] derives TC` (if `DerivingType` does not take parameters, we define `N = 0`), a derived instance is created in `DerivingType`'s companion object (or `DerivingType` itself if it is an object)
+
+What the derived instance looks like depends on the specifics of `DerivingType` and `TC`, first the arity of `TC`:
+
+### `TC` takes 1 parameter
+
+Therefore `TC` is defined as `TC[F[A_1, ..., A_K]]` (`TC[F]` if `K == 0`), there are two further cases depending on the `A_i`s:
+
+#### `F` and all arguments of `DerivingType` have kind `*`
+
+The generated instance is then:
+```scala
+given [T_1: TC, ..., T_N: TC]: TC[DerivingType[T_1, ..., T_N]] = TC.derived
+```
+
+If `N == 0`, we understand the above to mean:
+```scala
+given TC[DerivingType] = TC.derived
+```
+
+<!-- #### You can pair arguments of `F` and `DerivingType` starting from the right such that they have the same kinds pairwise, and all arguments of at least one of them are used up -->
+#### `F` and `DerivingType` have their `m` rightmost arguments which have the same kind pairwise and `N >= 0`, `K > 0`, and `m == N` and/or `m == K`
+
+The generated instance is then:
+If `m == N == K`:
+```scala
+given TC[DerivingType] = TC.derived
+```
+If `m == N < K`:
+```scala
+given TC[[A_1, ..., A_K] =>> DerivingType[A_(K-N+1), ..., A_K]] = TC.derived
+```
+
+TODO: Speak about `N == 0` being allowed, since then `(K-N+1) > K`
+
+If `m == K < N`:
+```scala
+given [T_1, ... T_(N-K)]: TC[[A_1, ..., A_K] =>> DerivingType[T_1, ... T_(N-K), A_1, ..., A_K]] = TC.derived
+```
+
+### `TC` takes 2 parameters
+
+Is `TC` the `CanEqual` type class ?
+If yes, proceed as follows, otherwise go to [`TC` is not valid for automatic derivation](#tc-is-not-valid-for-automatic-derivation)
+
+We have therefore: `DerivingType[T_1, ..., T_N] derives CanEqual`
+
+TODO: Talk about higher kinded types
+
+And the generated instance is:
+```scala
+given [T_1L, T_1R, ..., T_NL, T_NR]
+      (using CanEqual[T_1L, T_1R], ..., CanEqual[T_NL, T_NR]): 
+        CanEqual[DerivingType[T_1L, ..., T_NL], DerivingType[T_1R, ..., T_NR]] =
+          CanEqual.derived
+```
+
+### `TC` is not valid for automatic derivation
+
+Throw some error.
+<!-- 
 More formally, for a class/trait/object/enum `DerivingType derives TC`, the following given instance is created in `DerivingType`'s companion object (or `DerivingType` itself if it is an object):
 * if `DerivingType` doesn't have type parameters
 ```scala
@@ -35,6 +97,7 @@ given TC[DerivingType] = TC.derived
 ```scala
 given [T_1: TC, ... T_N: TC]: TC[DerivingType[T_1, ..., T_N]] = TC.derived
 ```
+-->
 
 `TC.derived` should be an expression that conforms to the expected type `TC[DerivingType]`, potentially elaborated using term and/or type inference.
 
