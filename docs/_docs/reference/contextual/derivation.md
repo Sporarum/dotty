@@ -26,15 +26,38 @@ given [T: Show]     : Show[Tree[T]]     = Show.derived
 
 We say that `Tree` is the _deriving type_ and that the `Eq`, `Ordering` and `Show` instances are _derived instances_.
 
-**Note:** The access to `derived` above is a normal access, therefore if there are multiple definitions of `derived` in the type class, overloading resolution applies.
+More formally, for a class/trait/object/enum `DerivingType derives TC`, the following given instance is created in `DerivingType`'s companion object (or `DerivingType` itself if it is an object):
+* if `DerivingType` doesn't have type parameters
+```scala
+given TC[DerivingType] = TC.derived
+```
+* if `DerivingType` has type parameters `[T_1, ..., T_N]`
+```scala
+given [T_1: TC, ... T_N: TC]: TC[DerivingType[T_1, ..., T_N]] = TC.derived
+```
 
-**Note:** `derived` can be used manually, this is useful when you do not have control over the definition. For example we can implement an `Ordering` for `Option`s like so:
+`TC.derived` should be an expression that conforms to the expected type `TC[DerivingType]`, potentially elaborated using term and/or type inference.
+
+**Note:** `TC.derived` is a normal access, therefore if there are multiple definitions of `TC.derived`, overloading resolution applies.
+
+**Note:** `TC.derived` can be used manually, this is useful when you do not have control over the definition. For example we can implement `Ordering` for `Option`s like so:
 
 ```scala
 given [T: Ordering]: Ordering[Option[T]] = Ordering.derived
 ```
 
 It is discouraged to directly refer to the `derived` member if you can use a `derives` clause instead.
+
+#### CanEqual
+
+With `DerivingType[T_1, ..., T_N] derives CanEqual`, the following instance is created:
+
+```scala
+given [T_1L, T_1R, ..., T_NL, T_NR]
+      (using CanEqual[T_1L, T_1R], ..., CanEqual[T_NL, T_NR]): 
+        CanEqual[DerivingType[T_1L, ..., T_NL], DerivingType[T_1R, ..., T_NR]] =
+          CanEqual.derived
+```
 
 All data types can have a `derives` clause. This document focuses primarily on data types which also have a given instance
 of the `Mirror` type class available.
