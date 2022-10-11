@@ -26,16 +26,27 @@ given [T: Show]     : Show[Tree[T]]     = Show.derived
 
 We say that `Tree` is the _deriving type_ and that the `Eq`, `Ordering` and `Show` instances are _derived instances_.
 
+**Note:** `derived` can be used manually, this is useful when you do not have control over the definition. For example we can implement `Ordering` for `Option`s like so:
+
+```scala
+given [T: Ordering]: Ordering[Option[T]] = Ordering.derived
+```
+
+It is discouraged to directly refer to the `derived` member if you can use a `derives` clause instead.
+
 ## Exact mechanism
-More formally, for a class/trait/object/enum `DerivingType[T_1, ..., T_N] derives TC`, a derived instance is created in `DerivingType`'s companion object (or `DerivingType` itself if it is an object).
+For a class/trait/object/enum `DerivingType[T_1, ..., T_N] derives TC`, a derived instance is created in `DerivingType`'s companion object (or `DerivingType` itself if it is an object).
 If `DerivingType` does not take parameters, we define `N = 0`.
 
-What the derived instance looks like depends on the specifics of `DerivingType` and `TC`, but the general shape is as follows:
+The general "shape" of the derived instance is as follows:
 ```scala
 given [...]: TC[ ... DerivingType[...] ... ] = TC.derived
 ```
+`TC.derived` should be an expression that conforms to the expected type on the left, potentially elaborated using term and/or type inference.
 
-The first condition is the arity of `TC`:
+**Note:** `TC.derived` is a normal access, therefore if there are multiple definitions of `TC.derived`, overloading resolution applies.
+
+What the derived instance precisely looks like depends on the specifics of `DerivingType` and `TC`, first condition the arity of `TC`:
 
 ### `TC` takes 1 parameter
 
@@ -106,18 +117,6 @@ The bounds of `T_i`s are handled correctly, for example: `T_2 <: T_1` becomes `T
 ### `TC` is not valid for automatic derivation
 
 Throw some error.
-
-`TC.derived` should be an expression that conforms to the expected type `TC[DerivingType]`, potentially elaborated using term and/or type inference.
-
-**Note:** `TC.derived` is a normal access, therefore if there are multiple definitions of `TC.derived`, overloading resolution applies.
-
-**Note:** `TC.derived` can be used manually, this is useful when you do not have control over the definition. For example we can implement `Ordering` for `Option`s like so:
-
-```scala
-given [T: Ordering]: Ordering[Option[T]] = Ordering.derived
-```
-
-It is discouraged to directly refer to the `derived` member if you can use a `derives` clause instead.
 
 All data types can have a `derives` clause. The rest of this document focuses primarily on data types which also have a given instance
 of the `Mirror` type class available.
