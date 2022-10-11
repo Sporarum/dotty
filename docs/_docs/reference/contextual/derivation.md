@@ -35,8 +35,9 @@ given [T: Ordering]: Ordering[Option[T]] = Ordering.derived
 It is discouraged to directly refer to the `derived` member if you can use a `derives` clause instead.
 
 ## Exact mechanism
+In the following, a parameter enumerations where the first index is bigger than the last means there is actually no paramers, for example: `A[T_2, ..., T_1]` means `A`.
+
 For a class/trait/object/enum `DerivingType[T_1, ..., T_N] derives TC`, a derived instance is created in `DerivingType`'s companion object (or `DerivingType` itself if it is an object).
-If `DerivingType` does not take parameters, we define `N = 0`.
 
 The general "shape" of the derived instance is as follows:
 ```scala
@@ -46,7 +47,7 @@ given [...]: TC[ ... DerivingType[...] ... ] = TC.derived
 
 **Note:** `TC.derived` is a normal access, therefore if there are multiple definitions of `TC.derived`, overloading resolution applies.
 
-What the derived instance precisely looks like depends on the specifics of `DerivingType` and `TC`, first condition the arity of `TC`:
+What the derived instance precisely looks like depends on the specifics of `DerivingType` and `TC`, the first condition is the arity of `TC`:
 
 ### `TC` takes 1 parameter
 
@@ -59,35 +60,35 @@ The generated instance is then:
 given [T_1: TC, ..., T_N: TC]: TC[DerivingType[T_1, ..., T_N]] = TC.derived
 ```
 
-If `N == 0`, we understand the above to mean:
+**Note:** If `N == 0` the above means:
 ```scala
 given TC[DerivingType] = TC.derived
 ```
+
 #### `F` and `DerivingType` have parameters of matching kind on the right
 This section concers cases where you can pair arguments of `F` and `DerivingType` starting from the right such that they have the same kinds pairwise, and all arguments of `F` or `DerivingType` (or both) are used up.
-We also add the requirement that `F` have at least one parameter.
+`F` must also have at least one parameter.
 
 The general shape will then be:
 ```scala
-given [...]: TC[[...] => DerivingType[...]] = TC.derived
+given [...]: TC[ [...] => DerivingType[...] ] = TC.derived
 ```
 Where of course `TC` and `DerivingType` are applied to types of the correct kind.
 
 To make this work, we split it into 3 cases:
 
-The generated instance is then:
 If `TC` and `DerivingType` take the same number of arguments (`N == K`):
 ```scala
 given TC[DerivingType] = TC.derived
 // simplified form of:
-// given TC[[A_1, ..., A_K] => DerivingType[A_1, ..., A_K]] = TC.derived
+given TC[ [A_1, ..., A_K] => DerivingType[A_1, ..., A_K] ] = TC.derived
 ```
 If `DerivingType` takes less arguments than `TC` (`N < K`), we throw away the leftmost ones:
 ```scala
-given TC[[A_1, ..., A_K] =>> DerivingType[A_(K-N+1), ..., A_K]] = TC.derived
+given TC[ [A_1, ..., A_K] =>> DerivingType[A_(K-N+1), ..., A_K] ] = TC.derived
 
 // if DerivingType takes no arguments (N == 0), the above simplifies to:
-given TC[[A_1, ..., A_K] =>> DerivingType] = TC.derived
+given TC[ [A_1, ..., A_K] =>> DerivingType ] = TC.derived
 ```
 
 If `TC` takes less arguments than `DerivingType` (`K < N`), we fill in the leftmost slots with type parameters:
@@ -107,7 +108,7 @@ Let `U_1`, ..., `U_M` be the parameters of `DerivingType` of kind `*`.
 The generated instance is then:
 ```scala
 given [T_1L, T_1R, ..., T_NL, T_NR]                            // every parameter of DerivingType twice
-      (using CanEqual[U_1L, U_1R], ..., CanEqual[U_NL, U_NR]): // only parameters of Deriving type with kind *
+      (using CanEqual[U_1L, U_1R], ..., CanEqual[U_ML, U_MR]): // only parameters of DerivingType with kind *
         CanEqual[DerivingType[T_1L, ..., T_NL], DerivingType[T_1R, ..., T_NR]] = // again, every parameter
           CanEqual.derived
 ```
