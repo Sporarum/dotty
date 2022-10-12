@@ -1,4 +1,4 @@
-# Scala Language Reference
+# Scala Language Specification
 
 First of all, the language specification is meant to be correct, precise and clear.
 
