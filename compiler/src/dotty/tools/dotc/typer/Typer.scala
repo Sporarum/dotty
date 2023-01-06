@@ -1924,7 +1924,9 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
       .withType(
         if isFullyDefined(pt, ForceDegree.flipBottom) then pt
         else if ctx.reporter.errorsReported then UnspecifiedErrorType
-        else errorType(i"cannot infer type; expected type $pt is not fully defined", tree.srcPos))
+        else 
+          println(s"""pt: $pt""")
+          errorType(i"cannot infer type; expected type $pt is not fully defined", tree.srcPos))
 
   def typedTypeTree(tree: untpd.TypeTree, pt: Type)(using Context): Tree =
     tree match
@@ -4058,30 +4060,26 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
               adaptOverloaded(ref)
           }
         case poly: PolyType if !(ctx.mode is Mode.Type) =>
-          print(s"""
-           |Trying to adapt1 the following:
-           |${poly.show}
-           |$poly
-           |with expected type:
-           |${pt.show}
-           |$pt
-           |""".stripMargin)
           if isApplyProxy(tree) then 
-            println("isApplyProxy")
             newExpr
           else if pt.isInstanceOf[PolyProto] then 
-            println("isPolyProto")
             tree
           else if !pt.exists then // no expected type
-            println("no expected type")
             ???
           else
-            println("else")
             pt match
               case RefinedType(_, _, npt: PolyType) => // Should be something that matches specifically PolyFunction instead
-                println()
+                print(s"""
+                        |Trying to adapt1 the following:
+                        |${poly.show}
+                        |$poly
+                        |with expected type:
+                        |${pt.show}
+                        |$pt
+                        |""".stripMargin)
+                /* println()
                 println(npt.paramRefs.map(_.show))
-                println(npt.paramRefs)
+                println(npt.paramRefs) */
 
                 val functionTypeParamBounds: List[TypeBounds] = npt.paramInfos
                 val functionTypeParamNames: List[TypeName] = npt.paramNames
@@ -4098,54 +4096,44 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
                   case (name, bounds) => untpd.TypeDef(name, untpd.TypeTree(bounds)).withAddedFlags(Param)
                 }
 
-                println()
+                /* println()
                 println(etaTypeParamsOld.map(_.show))
                 println(etaTypeParamsOld)
                 println(etaTypeParamsOld.map(_.name))
-                println(etaTypeParamsOld.map(_.symbol)) // .symbol should be defined
+                println(etaTypeParamsOld.map(_.symbol)) // .symbol should be defined */
 
 
                 val etaTypeParams = Symbols.newTypeParams(owner = ctx.owner, etaTypeParamNames, Param, _ => functionTypeParamBounds)
 
                 val etaTypeParams2 = etaTypeParams.map( sym => tpd.TypeDef(sym) )
 
-                println()
+                /* println()
                 println(etaTypeParams.map(_.show))
                 println(etaTypeParams)
-                println(etaTypeParams.map(_.name))
+                println(etaTypeParams.map(_.name)) */
 
                 val typeRefArgs = etaTypeParams.map{ TypeRef(NoPrefix, _) }
-                println()
-                println(typeRefArgs.map(_.show))
-                println(typeRefArgs)
-                val subMethod = poly.appliedTo(typeRefArgs).asInstanceOf[MethodType]
-                println()
-                println(poly.show)
-                println(poly)
-                println()
-                println(poly.resultType.show)
-                println(poly.resultType)
-                println()
-                println(subMethod.show)
-                println(subMethod)
-
-                val etaTermParamNames = subMethod.paramNames.map( UniqueName.fresh(_) )
-
-                val methodTermParams = subMethod.paramInfos
-                println(methodTermParams.map(_.show))
-                val etaTermSymbols = (etaTermParamNames zip methodTermParams).map( (name, tpe) => Symbols.newSymbol(ctx.owner, name, Param, tpe, coord = tree.span) )
-
-                val etaTermParams = etaTermSymbols.map(sym => tpd.ValDef(sym))
-
-                val termArgs = etaTermParams.map( tpd.Ident(_) )
                 
-                //val tArgs = typeRefArgs.map(ref => tpd.TypeTree(ref))
-                
-                // tree[tArgs](termArgs)
-                val body = tree.appliedToTypes(typeRefArgs).appliedToArgs(termArgs)
+                // tree[typeRefArgs] : npt[typeRefArgs]
+                val submethod = tree.appliedToTypes(typeRefArgs)
+                val subfunction = npt.appliedTo(typeRefArgs).asInstanceOf[MethodType].toFunctionType(isJava = false)
+                val typedsubmethod = typed(submethod, subfunction)
 
-                // [etaTypeParamsOld] => (etaTermParams) => tree[tArgs](termArgs)
-                val res = tpd.Lambda(subMethod, termArgs => tree.appliedToTypes(typeRefArgs).appliedToArgs(termArgs))//tpd.PolyFunction(etaTypeParams2, tpd.Function(etaTermParams, body))
+                ///*
+                print(s"""
+                         |submethod:
+                         |${submethod.show}
+                         |$submethod
+                         |subfunction:
+                         |${subfunction.show}
+                         |$subfunction
+                         |typedsubmethod:
+                         |${typedsubmethod.show}
+                         |$typedsubmethod
+                         |""".stripMargin)
+                //*/
+
+                val res = EmptyTree
                 print(s"""
                          |Result:
                          |${res.show}
