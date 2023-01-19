@@ -4127,7 +4127,10 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
                   // println("applySym: " + applySym.info.show)
                   tpd.DefDef(applySym, {
                     case tparams :: vparams :: Nil =>
-                      typed(untpd.TypeApply(untpd.TypedSplice(tree), tparams.map(untpd.TypedSplice(_))), npt.instantiate(tparams.tpes).toFunctionType(isJava = false))
+                      typed(untpd.TypeApply(untpd.TypedSplice(tree), tparams.map(untpd.TypedSplice(_))),
+                        // TODO: substitute vparams to handle dependent methods (e.g., `[T] => (x: T) => x.A`)
+                        npt.instantiate(tparams.tpes).toFunctionType(isJava = false)
+                      )
                     case _ => ???
                   })
                 val t = tpd.AnonClass(ctx.owner, List(defn.PolyFunctionType), tree.span)(clsSymbol => List(applyMethod(clsSymbol)))
