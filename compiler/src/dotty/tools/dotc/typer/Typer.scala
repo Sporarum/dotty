@@ -4095,114 +4095,132 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
               adaptOverloaded(ref)
           }
         case poly: PolyType if !(ctx.mode is Mode.Type) =>
-          print(s"""
-           |Trying to adapt1 the following:
-           |${poly.show}
-           |$poly
-           |with expected type:
-           |${pt.show}
-           |$pt
-           |""".stripMargin)
           if isApplyProxy(tree) then 
-            println("isApplyProxy")
+            // println("isApplyProxy")
             newExpr
           else if pt.isInstanceOf[PolyProto] then 
-            println("isPolyProto")
+            // println("isPolyProto")
             tree
           else if !pt.exists then // no expected type
-            println("no expected type")
+            // println("no expected type")
             ???
           else
-            println("else")
+            // println("else")
             pt match
               case RefinedType(_, _, npt: PolyType) => // Should be something that matches specifically PolyFunction instead
-                //println()
-                //println(npt.paramRefs.map(_.show))
-                //println(npt.paramRefs)
-
-                // use DefDef that takes two args, the symbol of the def, and a lambda that returns the body of the def from it's parameters
-                
-                val functionTypeParamBounds: List[TypeBounds] = npt.paramInfos // we use this even though we should use a etaTypeParamBounds with the names replaced by the fresh ones
-                val functionTypeParamNames: List[TypeName] = npt.paramNames
-
-                val subFunction = npt.resType.asInstanceOf[MethodType]
-
-                val functionTermParams: List[Type] = subFunction.paramInfos
-                val functionTermParamNames: List[TermName] = subFunction.paramNames
-
-
-                val etaTypeParamNames = functionTypeParamNames.map( UniqueName.fresh(_) )
-
-                /*val etaTypeParamsOld = (etaTypeParamNames zip functionTypeParamBounds).map{
-                  case (name, bounds) => untpd.TypeDef(name, untpd.TypeTree(bounds)).withAddedFlags(Param)
-                }*/
-
-                //println()
-                //println(etaTypeParamsOld.map(_.show))
-                //println(etaTypeParamsOld)
-                //println(etaTypeParamsOld.map(_.name))
-                //println(etaTypeParamsOld.map(_.symbol)) // .symbol should be defined
-
-
-                val etaTypeSymbols = typeOfApply.paramSymss.head//Symbols.newTypeParams(owner = ctx.owner, etaTypeParamNames, Param, _ => functionTypeParamBounds)
-
-                val etaTypeParams2 = etaTypeSymbols.map( sym => tpd.TypeDef(sym) )
-
-                //println()
-                //println(etaTypeSymbols.map(_.show))
-                //println(etaTypeSymbols)
-                //println(etaTypeSymbols.map(_.name))
-
-                val typeRefArgs = etaTypeSymbols.map{ TypeRef(NoPrefix, _) }
-                //println()
-                //println(typeRefArgs.map(_.show))
-                //println(typeRefArgs)
-                def computeResult(p: PolyType): Type = poly.appliedTo(p.paramRefs)
-                val typeOfApply = PolyType(etaTypeParamNames)(_ => functionTypeParamBounds, computeResult) // Should use the lambdas, they give us the etaTypes, we shouldn't try to create them
-                
-                val subMethod = typeOfApply.resType.asInstanceOf[MethodType]//poly.appliedTo(typeRefArgs).asInstanceOf[MethodType]
-                //println()
-                //println(poly.show)
-                //println(poly)
-                //println()
-                //println(poly.resultType.show)
-                //println(poly.resultType)
-                //println()
-                //println(subMethod.show)
-                //println(subMethod)
-
-                val etaTermParamNames = subMethod.paramNames.map( UniqueName.fresh(_) )
-
-                val methodTermParams = subMethod.paramInfos
-                //println(methodTermParams.map(_.show))
-                val etaTermSymbols = (etaTermParamNames zip methodTermParams).map( (name, tpe) => Symbols.newSymbol(ctx.owner, name, Param, tpe, coord = tree.span) )
-
-                val etaTermParams = etaTermSymbols.map(sym => tpd.ValDef(sym))
-
-                val etaTermNamedTypes = etaTermSymbols.map( sym => NamedType(NoPrefix, sym) )
-                val termArgs = etaTermNamedTypes.map( p => tpd.Ident(p) )
-
-
-
-
-                val applySymbol: Symbol => TermSymbol = owner => Symbols.newSymbol(owner, nme.apply, Method, typeOfApply, coord = tree.span) // flag Synthetic ?
-                val paramss: List[List[Symbol]] = List( etaTypeSymbols, etaTermSymbols )
-                val body: tpd.Tree = tree.appliedToTypes(typeRefArgs).appliedToArgs(termArgs)
-                val applyMethod: Symbol => tpd.DefDef = owner => tpd.DefDef(applySymbol(owner), paramss, typeOfApply.finalResultType, body)
-                val res = tpd.AnonClass(ctx.owner, List(defn.PolyFunctionType), tree.span)(clsSymbol => List(applyMethod(clsSymbol)))
-
-                //val tArgs = typeRefArgs.map(ref => tpd.TypeTree(ref)) 
-                
-                // tree[tArgs](termArgs)
-
-                // [etaTypeParamsOld] => (etaTermParams) => tree[tArgs](termArgs)
-                //val res = tpd.Lambda(subMethod, termArgs => tree.appliedToTypes(typeRefArgs).appliedToArgs(termArgs))//tpd.PolyFunction(etaTypeParams2, tpd.Function(etaTermParams, body))
                 print(s"""
-                         |Result:
-                         |${res.show}
-                         |$res
-                         |""".stripMargin)
-                res//typed(res, pt)
+                |Trying to adapt1 the following:
+                |${poly.show}
+                |$poly
+                |with expected type:
+                |${pt.show}
+                |$pt
+                |""".stripMargin)
+  
+
+                // val tparamNames: List[TypeName] = npt.paramNames
+                // val typeOfApply = PolyType(tparamNames)(tl => npt.paramInfos.subst(), computeResult)
+                // val typeOfApply = npt
+
+                def applyMethod(owner: Symbol): DefDef =
+                  val applySym = Symbols.newSymbol(owner, nme.apply, Method | Synthetic, npt, coord = tree.span).entered
+                  // println("applySym: " + applySym.info.show)
+                  tpd.DefDef(applySym, {
+                    case tparams :: vparams :: Nil =>
+                      typed(untpd.TypeApply(untpd.TypedSplice(tree), tparams.map(untpd.TypedSplice(_))), npt.instantiate(tparams.tpes).toFunctionType(isJava = false))
+                    case _ => ???
+                  })
+                val t = tpd.AnonClass(ctx.owner, List(defn.PolyFunctionType), tree.span)(clsSymbol => List(applyMethod(clsSymbol)))
+                val s = tpd.Typed(t, TypeTree(pt))
+                s
+
+                // //println()
+                // //println(npt.paramRefs.map(_.show))
+                // //println(npt.paramRefs)
+
+                // // use DefDef that takes two args, the symbol of the def, and a lambda that returns the body of the def from it's parameters
+                
+                // val functionTypeParamBounds: List[TypeBounds] = npt.paramInfos // we use this even though we should use a etaTypeParamBounds with the names replaced by the fresh ones
+                // val functionTypeParamNames: List[TypeName] = npt.paramNames
+                // val subFunction = npt.resType.asInstanceOf[MethodType]
+
+                // val functionTermParams: List[Type] = subFunction.paramInfos
+                // val functionTermParamNames: List[TermName] = subFunction.paramNames
+
+
+                // val etaTypeParamNames = functionTypeParamNames.map( UniqueName.fresh(_) )
+
+                // /*val etaTypeParamsOld = (etaTypeParamNames zip functionTypeParamBounds).map{
+                //   case (name, bounds) => untpd.TypeDef(name, untpd.TypeTree(bounds)).withAddedFlags(Param)
+                // }*/
+
+                // //println()
+                // //println(etaTypeParamsOld.map(_.show))
+                // //println(etaTypeParamsOld)
+                // //println(etaTypeParamsOld.map(_.name))
+                // //println(etaTypeParamsOld.map(_.symbol)) // .symbol should be defined
+
+
+                // // val etaTypeSymbols = typeOfApply.paramSymss.head//Symbols.newTypeParams(owner = ctx.owner, etaTypeParamNames, Param, _ => functionTypeParamBounds)
+
+                // // val etaTypeParams2 = etaTypeSymbols.map( sym => tpd.TypeDef(sym) )
+
+                // //println()
+                // //println(etaTypeSymbols.map(_.show))
+                // //println(etaTypeSymbols)
+                // //println(etaTypeSymbols.map(_.name))
+
+                // // val typeRefArgs = etaTypeSymbols.map{ TypeRef(NoPrefix, _) }
+                // //println()
+                // //println(typeRefArgs.map(_.show))
+                // //println(typeRefArgs)
+                // def computeResult(p: PolyType): Type = poly.appliedTo(p.paramRefs)
+                // val typeOfApply = PolyType(etaTypeParamNames)(_ => functionTypeParamBounds, computeResult) // Should use the lambdas, they give us the etaTypes, we shouldn't try to create them
+                
+                // val subMethod = typeOfApply.resType.asInstanceOf[MethodType]//poly.appliedTo(typeRefArgs).asInstanceOf[MethodType]
+                // //println()
+                // //println(poly.show)
+                // //println(poly)
+                // //println()
+                // //println(poly.resultType.show)
+                // //println(poly.resultType)
+                // //println()
+                // //println(subMethod.show)
+                // //println(subMethod)
+
+                // val etaTermParamNames = subMethod.paramNames.map( UniqueName.fresh(_) )
+
+                // val methodTermParams = subMethod.paramInfos
+                // //println(methodTermParams.map(_.show))
+                // val etaTermSymbols = (etaTermParamNames zip methodTermParams).map( (name, tpe) => Symbols.newSymbol(ctx.owner, name, Param, tpe, coord = tree.span) )
+
+                // val etaTermParams = etaTermSymbols.map(sym => tpd.ValDef(sym))
+
+                // val etaTermNamedTypes = etaTermSymbols.map( sym => NamedType(NoPrefix, sym) )
+                // val termArgs = etaTermNamedTypes.map( p => tpd.Ident(p) )
+
+
+
+                // val res = ???
+
+                // // val applySymbol: Symbol => TermSymbol = owner => Symbols.newSymbol(owner, nme.apply, Method, typeOfApply, coord = tree.span) // flag Synthetic ?
+                // // val paramss: List[List[Symbol]] = List( etaTypeSymbols, etaTermSymbols )
+                // // val body: tpd.Tree = tree.appliedToTypes(typeRefArgs).appliedToArgs(termArgs)
+                // // val applyMethod: Symbol => tpd.DefDef = owner => tpd.DefDef(applySymbol(owner), paramss, typeOfApply.finalResultType, body)
+                // // val res = tpd.AnonClass(ctx.owner, List(defn.PolyFunctionType), tree.span)(clsSymbol => List(applyMethod(clsSymbol)))
+
+                // //val tArgs = typeRefArgs.map(ref => tpd.TypeTree(ref)) 
+                
+                // // tree[tArgs](termArgs)
+
+                // // [etaTypeParamsOld] => (etaTermParams) => tree[tArgs](termArgs)
+                // //val res = tpd.Lambda(subMethod, termArgs => tree.appliedToTypes(typeRefArgs).appliedToArgs(termArgs))//tpd.PolyFunction(etaTypeParams2, tpd.Function(etaTermParams, body))
+                // print(s"""
+                //          |Result:
+                //          |${res.show}
+                //          |$res
+                //          |""".stripMargin)
+                // res//typed(res, pt)
                   
               case _ =>
                 //TODO

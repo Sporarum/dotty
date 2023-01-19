@@ -4056,7 +4056,6 @@ object Types {
     def isParamDependent(using Context): Boolean = true
 
     def newParamRef(n: Int): TypeParamRef = new TypeParamRefImpl(this, n)
-
     @threadUnsafe lazy val typeParams: List[LambdaParam] =
       paramNames.indices.toList.map(new LambdaParam(this, _))
 
