@@ -4120,7 +4120,9 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
                 //println(npt.paramRefs.map(_.show))
                 //println(npt.paramRefs)
 
-                val functionTypeParamBounds: List[TypeBounds] = npt.paramInfos
+                // use DefDef that takes two args, the symbol of the def, and a lambda that returns the body of the def from it's parameters
+                
+                val functionTypeParamBounds: List[TypeBounds] = npt.paramInfos // we use this even though we should use a etaTypeParamBounds with the names replaced by the fresh ones
                 val functionTypeParamNames: List[TypeName] = npt.paramNames
 
                 val subFunction = npt.resType.asInstanceOf[MethodType]
@@ -4131,9 +4133,9 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
 
                 val etaTypeParamNames = functionTypeParamNames.map( UniqueName.fresh(_) )
 
-                val etaTypeParamsOld = (etaTypeParamNames zip functionTypeParamBounds).map{
+                /*val etaTypeParamsOld = (etaTypeParamNames zip functionTypeParamBounds).map{
                   case (name, bounds) => untpd.TypeDef(name, untpd.TypeTree(bounds)).withAddedFlags(Param)
-                }
+                }*/
 
                 //println()
                 //println(etaTypeParamsOld.map(_.show))
@@ -4142,7 +4144,7 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
                 //println(etaTypeParamsOld.map(_.symbol)) // .symbol should be defined
 
 
-                val etaTypeSymbols = Symbols.newTypeParams(owner = ctx.owner, etaTypeParamNames, Param, _ => functionTypeParamBounds)
+                val etaTypeSymbols = typeOfApply.paramSymss.head//Symbols.newTypeParams(owner = ctx.owner, etaTypeParamNames, Param, _ => functionTypeParamBounds)
 
                 val etaTypeParams2 = etaTypeSymbols.map( sym => tpd.TypeDef(sym) )
 
@@ -4155,7 +4157,10 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
                 //println()
                 //println(typeRefArgs.map(_.show))
                 //println(typeRefArgs)
-                val subMethod = poly.appliedTo(typeRefArgs).asInstanceOf[MethodType]
+                def computeResult(p: PolyType): Type = poly.appliedTo(p.paramRefs)
+                val typeOfApply = PolyType(etaTypeParamNames)(_ => functionTypeParamBounds, computeResult) // Should use the lambdas, they give us the etaTypes, we shouldn't try to create them
+                
+                val subMethod = typeOfApply.resType.asInstanceOf[MethodType]//poly.appliedTo(typeRefArgs).asInstanceOf[MethodType]
                 //println()
                 //println(poly.show)
                 //println(poly)
@@ -4176,12 +4181,14 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
 
                 val etaTermNamedTypes = etaTermSymbols.map( sym => NamedType(NoPrefix, sym) )
                 val termArgs = etaTermNamedTypes.map( p => tpd.Ident(p) )
-                
-                val typeOfApply = PolyType(etaTypeParamNames)(_ => functionTypeParamBounds, _ => subMethod)
+
+
+
+
                 val applySymbol: Symbol => TermSymbol = owner => Symbols.newSymbol(owner, nme.apply, Method, typeOfApply, coord = tree.span) // flag Synthetic ?
                 val paramss: List[List[Symbol]] = List( etaTypeSymbols, etaTermSymbols )
                 val body: tpd.Tree = tree.appliedToTypes(typeRefArgs).appliedToArgs(termArgs)
-                val applyMethod: Symbol => tpd.DefDef = owner => tpd.DefDef(applySymbol(owner), paramss, subMethod.resType, body)
+                val applyMethod: Symbol => tpd.DefDef = owner => tpd.DefDef(applySymbol(owner), paramss, typeOfApply.finalResultType, body)
                 val res = tpd.AnonClass(ctx.owner, List(defn.PolyFunctionType), tree.span)(clsSymbol => List(applyMethod(clsSymbol)))
 
                 //val tArgs = typeRefArgs.map(ref => tpd.TypeTree(ref)) 

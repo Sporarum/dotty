@@ -3,6 +3,7 @@ def foo[A](x: A): A = x
 def bar[A]: A => A = x => x
 type F[A] = A => A
 def baz[A]: F[A] = x => x
+//def doubleTypes[A](using A)[B](x: B): B = x
 
 // These vals should already compile on main
 object evenBefore:
@@ -26,6 +27,11 @@ object After:
 
   val baz2: [T] => T => T = baz // should be indistinguishible from evenBefore.baz2
 
+  // other examples with using params and extension methods
+
+  //val asVal: [A1] => A1 ?=> [B1] => B1 => B1 = doubleTypes
+  
+
 // Should not compile even with this feature, to be moved to a neg test
 object notEvenAfter:
   val withoutTypeFoo = foo // should infer Any => Any
@@ -40,3 +46,5 @@ object notEvenAfter:
   val failedFoo = [T] => foo[T] // should fail as polymorphic functions need a term parameter
   val failedBar = [T] => bar[T] // should fail as polymorphic functions need a term parameter
   val failedBaz = [T] => baz[T] // should fail as polymorphic functions need a term parameter
+  
+  //val asVal: [B1] => B1 => B1 = doubleTypes // should fail, as [A] is first argument
